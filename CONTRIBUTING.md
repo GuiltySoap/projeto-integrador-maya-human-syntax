@@ -1,154 +1,95 @@
-# Como Contribuir com o Nexus: Human Sintax
+# Como Contribuir com o Maya: Human Syntax
 
-Obrigado por colocar a mão na massa! Este guia explica como a gente trabalha no repositório: como organizar branches, como escrever commits e como levar uma mudança até o `main`.
+Obrigado por contribuir com o projeto! Este guia explica como configurar o ambiente do zero, rodar o jogo e os testes, organizar branches e enviar Pull Requests para o `main`.
 
-A ideia central é simples: **mudanças pequenas, revisadas rápido e integradas com frequência.**
+A regra central é simples: **mudanças pequenas, rastreáveis a uma issue/história, testadas e revisadas antes do merge.**
 
 ---
 
-## 1. Fluxo de trabalho (GitHub Flow)
+## 1. Configuração do Ambiente
 
-Usamos um fluxo enxuto, com **uma única branch de longa duração**: o `main`.
+### Pré-requisitos
+* **Git** (2.30+)
+* **Godot Engine 4.7** (para rodar, editar e testar o jogo principal)
+* **GCC / MinGW** + **`make` (`mingw32-make` no Windows)** (para compilar e testar o backend em C)
 
-| Branch | Papel | Nasce de | Vai para |
-|--------|-------|----------|----------|
-| `main` | Sempre estável e jogável. Tudo que está aqui pode virar entrega. | — | — |
-| `<tipo>/<escopo-curto>` | Uma mudança isolada, de vida curta (idealmente 1 a 3 dias). | `main` | `main` |
+### Passo a passo
 
-Entregas oficiais (U1, U2, ...) não têm branch própria. Elas são marcadas com **tags** no `main`:
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/GuiltySoap/projeto-integrador-maya-human-syntax.git
+   cd projeto-integrador-maya-human-syntax
+   ```
 
-```bash
-git tag -a v1.0.1 -m "Entrega U1"
-git push origin v1.0.1
-```
+2. **Executar o jogo (Godot 4.7):**
+   * Abra a Godot 4.7, clique em **Importar** e selecione o arquivo `project.godot`.
+   * Aguarde a importação inicial de assets e classes (`class_name`).
+   * Pressione **F5** para executar o jogo a partir da Splash Screen.
+
+3. **Compilar e testar o Backend em C (v2.1):**
+   * **Windows (PowerShell / CMD com MinGW):**
+     ```powershell
+     mingw32-make -B backend
+     .\backend\output\maya_backend.exe --version
+     .\backend\output\maya_backend.exe --v21-choice t1_4_maya --nome Erika --reset
+     ```
+   * **Linux / macOS / MSYS2:**
+     ```bash
+     make backend
+     make test-c
+     ```
+   * **Rodar a suíte nativa de testes em C no Windows (1.461 verificações):**
+     ```powershell
+     gcc -std=c11 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wnull-dereference -Wstrict-prototypes -Wmissing-prototypes -Wundef -Wwrite-strings -Werror -g -O1 -DBK_TESTING backend/tests/test_backend.c backend/bk_common.c backend/bk_args.c backend/bk_estado.c backend/bk_catalogo.c backend/bk_comando.c backend/bk_maya_v21.c backend/json_loader.c backend/ui.c backend/output/cJSON.o -lm -o backend/output/test_backend.exe
+     .\backend\output\test_backend.exe
+     ```
+
+4. **Rodar as suítes de teste no editor Godot:**
+   * Abra cada cena de teste (`tests/sistemas_novos/sistemas_novos.tscn`, `tests/monitor_virtual/monitor_virtual.tscn`, `tests/splash/splash.tscn`) e pressione **F6**.
+   * Todas as suítes devem finalizar com **0 falhas**.
+
+---
+
+## 2. Fluxo de Trabalho (GitHub Flow)
+
+| Branch | Papel | Origem | Destino |
+| :--- | :--- | :--- | :--- |
+| `main` | Sempre estável, compilável e jogável. | — | — |
+| `<tipo>/<area>-<descricao>` | Mudança isolada ligada a uma US ou issue. | `main` | `main` (via PR) |
 
 ### Regras
-
-- Ninguém faz push direto no `main`. Toda mudança entra por Pull Request.
-- Uma branch resolve **um** problema. Se você começou a mexer em outra coisa, abra outra branch.
-- Atualize sua branch com o `main` antes de pedir revisão (`git pull --rebase origin main`).
-- Branch mesclada é branch apagada. O GitHub pode fazer isso automaticamente após o merge.
-- Correção urgente? Segue o mesmo caminho, só que com prioridade na revisão. Não existe fila separada para `hotfix`.
-
-### Nomes de branches
-
-Formato: `<tipo>/<area>-<descricao-curta>`, tudo em minúsculas e separado por hífen.
-
-```
-feat/engine-c-menu-principal
-feat/rules-hs-pontuacao-dia12
-fix/engine-c-crash-menu
-docs/atualiza-readme
-chore/atualiza-dependencias
-```
-
-O `<tipo>` é o mesmo usado nos commits (veja a seção 2).
+* **Sem push direto no `main`**: toda alteração entra via Pull Request revisado.
+* **Uma branch por tarefa/US** (ex.: `feat/backend-roteiro-v21`, `fix/ui-quebra-linha-chat`, `docs/sprint3-rastreabilidade`).
+* Sempre atualize sua branch antes de abrir PR: `git pull --rebase origin main`.
+* Remova a branch após o merge.
 
 ---
 
-## 2. Mensagens de commit
+## 3. Padrão de Commits e Rastreabilidade
 
-Seguimos o [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/) com **escopo entre parênteses** para dizer qual parte do projeto foi tocada:
+Seguimos [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/) vinculando cada commit à US ou Issue:
 
-```
+```text
 tipo(escopo): descrição curta no imperativo
 
-Corpo opcional: explique o POR QUÊ, não só o quê.
+Explicação breve do porquê da mudança (quando necessário).
 
-Refs: #42
+Refs: #12 / US-15
 ```
 
-### Tipos
-
-| Tipo | Use quando... |
-|---|---|
-| `feat` | Entra uma funcionalidade nova no jogo |
-| `fix` | Você corrige um bug |
-| `docs` | Só a documentação mudou |
-| `test` | Você cria ou ajusta testes |
-| `refactor` | Reorganiza o código sem mudar o comportamento |
-| `style` | Formatação e indentação, sem mudar a lógica |
-| `perf` | Melhora de desempenho |
-| `build` | Mudança no Makefile, Stack/Cabal ou scripts de build |
-| `ci` | Mudança nos workflows do GitHub Actions |
-| `chore` | Manutenção geral, configs, dependências |
-| `revert` | Desfaz um commit anterior |
-
-### Escopos sugeridos
-
-| Escopo | Cobre |
-|---|---|
-| `engine` | Código em C (janela, loop, render, input) |
-| `rules` | Regras e pontuação em Haskell |
-| `ui` | Menus, HUD e telas |
-| `assets` | Sprites, sons e fontes |
-| `repo` | Arquivos de configuração e organização do repositório |
-
-### Exemplos
-
-```
-feat(ui): adiciona menu principal navegável
-fix(rules): corrige Pontuação_Dia no cenário de empate
-docs(repo): adiciona matriz RACI da squad
-ci(repo): roda build automático a cada push
-refactor(engine): separa o loop principal em funções menores
-```
-
-### Boas práticas
-
-- Título com no máximo ~72 caracteres, no imperativo ("adiciona", não "adicionado").
-- Sem ponto final no título.
-- **Um commit, uma ideia.** Se a mensagem precisa de "e" para descrever, provavelmente são dois commits.
-- Referencie a issue no rodapé quando existir (`Refs: #42` ou `Closes: #42`).
-
-### Validação automática
-
-Existe um hook `commit-msg` em `.githooks/` que bloqueia commits fora do padrão. Ative uma única vez após clonar:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-Se o commit for recusado, releia o título: quase sempre o problema é o tipo ou os dois-pontos.
+| Tipo | Quando usar |
+| :--- | :--- |
+| `feat` | Nova funcionalidade ou história de usuário |
+| `fix` | Correção de bug |
+| `test` | Adição ou ajuste de testes automatizados |
+| `refactor` | Reestruturação interna sem alterar comportamento |
+| `docs` | Atualização de README, relatórios, diagramas ou guias |
+| `build` | Alterações em `Makefile`, presets de exportação ou compilação |
 
 ---
 
-## 3. Pull Requests
+## 4. Regras Técnicas Obrigatórias
 
-### Antes de abrir
-
-- [ ] O projeto compila sem erros nem warnings novos.
-- [ ] Você rodou o jogo e testou o que mudou.
-- [ ] Sua branch está atualizada com o `main`.
-- [ ] Os commits seguem o padrão da seção 2.
-
-### Ao abrir
-
-1. Abra o PR da sua branch **para o `main`**.
-2. O título segue o formato de commit, por exemplo: `feat(ui): adiciona menu principal navegável`.
-3. Preencha a descrição com estes três pontos:
-   - **O que mudou:** resumo direto da alteração.
-   - **Como testar:** passo a passo para reproduzir.
-   - **Fora do escopo:** o que você deixou de fazer de propósito.
-4. Se for mudança visual, anexe um print ou GIF.
-5. PR ainda em andamento? Abra como **Draft**.
-
-### Revisão
-
-- É necessária **1 aprovação** de outro integrante. Ninguém aprova o próprio PR.
-- Quem revisa tenta responder em até **2 dias úteis**.
-- Comentários são sobre o código, não sobre a pessoa. Prefira perguntas e sugestões a ordens.
-- Quem abriu o PR resolve os comentários e avisa quando estiver pronto para nova revisão.
-
-### Merge
-
-- Usamos **Squash and merge**: o PR vira um único commit no `main`, e o título do PR vira a mensagem do commit (por isso ele precisa seguir o padrão).
-- Quem abriu o PR faz o merge depois da aprovação e do build verde.
-- Depois do merge, confirme que a branch foi apagada.
-
----
-
-## 4. Dúvidas e problemas
-
-- Encontrou um bug ou tem uma ideia? Abra uma **issue** descrevendo o que aconteceu, o que você esperava e como reproduzir.
-- Não sabe por onde começar? Procure issues com o rótulo `good first issue` ou pergunte no canal da squad antes de começar a codar.
+* **Sem chamadas ao shell:** o código Godot **nunca** deve usar `OS.execute`, `OS.create_process`, `OS.shell_open` ou `OS.kill`. O código C **nunca** deve usar `system`, `popen` ou funções de cópia sem limite (`strcpy`, `strcat`, `sprintf`, `gets`, `scanf`).
+* **Compilação limpa:** qualquer alteração em `backend/` precisa compilar com `0 erros` e `0 avisos` sob `-Werror` e passar na suíte `test_backend.exe`.
+* **GDScript tipado:** todas as funções e variáveis novas em `.gd` devem declarar tipos estáticos e usar **tabs**.
