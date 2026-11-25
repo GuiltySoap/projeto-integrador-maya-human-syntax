@@ -30,6 +30,10 @@ typedef struct {
     char timestamp[BK_TIMESTAMP_MAX];
     bool tem_dialogos;
     char dialogos[BK_PATH_MAX];
+    bool tem_escolha_v21;
+    char escolha_v21[BK_ID_MAX + 1];
+    bool tem_nome;
+    char nome[64];
 } bk_args;
 
 /* Devolve BK_OK, BK_ERR_ARG (ausente, duplicado, desconhecido, posicional...) ou BK_ERR_ID_FORMATO (--choice fora do formato).

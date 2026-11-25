@@ -8,6 +8,11 @@ const PASTA := "user://nexus_os"
 const CAMINHO := "user://nexus_os/configuracoes.cfg"
 const PADRAO := {
 	"papel_de_parede": "dia",          # dia | grade | preto
+	"wallpaper_id": "auto",            # "auto" (sorteado ao abrir o jogo, fixo na sessão) ou um id de core/data/wallpapers.json
+	"wallpaper_slideshow": false,      # troca a cada 60 s com transição suave
+	"wallpaper_ordem": "sequencial",   # sequencial | aleatorio (vale para o slideshow)
+	"wallpaper_indice": 0,             # posição do wallpaper exibido no catálogo (retoma o slideshow sequencial de onde parou)
+	"intensidade_glitch": 1.0,         # 0 a 1: escala dos glitches condicionais da Dependência (0 = nenhum)
 	"tema": "auto",                    # auto | roxo | azul | verde
 	"volume_master": 0.8,
 	"volume_bgm": 0.35,
@@ -81,6 +86,17 @@ func carregar() -> void:
 		var v: Variant = cf.get_value("config", chave, PADRAO[chave])
 		if typeof(v) == typeof(PADRAO[chave]):
 			valores[chave] = v
+	validar_valores()
+
+
+## Corrige valores salvos que deixaram de fazer sentido (wallpaper apagado do catálogo, ordem desconhecida, números fora da faixa).
+func validar_valores() -> void:
+	if str(valores.get("wallpaper_id", "auto")) != "auto" and not Wallpapers.valido(str(valores.get("wallpaper_id", ""))):
+		valores["wallpaper_id"] = "auto"
+	if not (str(valores.get("wallpaper_ordem", "")) in ["sequencial", "aleatorio"]):
+		valores["wallpaper_ordem"] = "sequencial"
+	valores["wallpaper_indice"] = maxi(0, int(valores.get("wallpaper_indice", 0)))
+	valores["intensidade_glitch"] = clampf(float(valores.get("intensidade_glitch", 1.0)), 0.0, 1.0)
 
 
 func salvar() -> void:

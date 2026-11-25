@@ -60,10 +60,91 @@
    "somente_leitura": false
   },
   {
-   "caminho": "/home/usuario/Lógica de Programação/lista_01.txt",
+   "caminho": "/home/usuario/Lógica de Programação/aula_01_variaveis.txt",
    "tipo": "arquivo",
    "somente_leitura": false,
-   "conteudo": "Lista 1 — variáveis e tipos\n1. Declare duas variáveis e some os valores.\n2. Converta uma nota de texto para número.",
+   "conteudo": "Resumo: int para inteiros, float para decimais, string para textos e bool para verdadeiro/falso. Lembrar de tipar antes na prova.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/aula_02_condicionais.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Estrutura if / else if / else. Atenção: usar '==' para comparação e '=' apenas para atribuição.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/aula_03_lacos.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Exercício fixação: imprimir números pares de 0 a 20 usando for (int i = 0; i <= 20; i += 2). Testado e funcionando.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/aula_04_vetores.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Arrays começam no índice 0. Se o vetor tem tamanho 5, o último elemento é vetor[4]. Erro clássico de estouro de índice.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/aula_05_funcoes.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Funções com retorno void não devolvem valor, apenas executam uma rotina. Útil para organizar o código principal.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/exercicios_lista_1.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Questão 2 (Média aritmética): media = (n1 + n2 + n3) / 3.0; // usar 3.0 para não perder as casas decimais.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/exercicios_lista_2.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Questão 4 (Número primo): verificar divisores apenas até a raiz quadrada de N para otimizar o laço.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/exercicios_lista_3.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Questão 1 (Inverter string): percorrer o texto de trás para frente usando length - 1 até 0. Resposta conferida no lab.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/anotacoes_monitoria_marcos.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Dica do Marcos: sempre testar casos de borda (zero, números negativos e entradas vazias) antes de enviar a lista.",
+   "meta": {
+    "Origem": "conta CESAR School"
+   }
+  },
+  {
+   "caminho": "/home/usuario/Lógica de Programação/rascunho_prova_p1.txt",
+   "tipo": "arquivo",
+   "somente_leitura": false,
+   "conteudo": "Revisar: tabela verdade (AND, OR, NOT), operadores lógicos e rastreamento de mesa de laços aninhados.",
    "meta": {
     "Origem": "conta CESAR School"
    }
@@ -84,79 +165,10 @@
    "conteudo": "Lista 3 — laços (aberta no sistema da CESAR)\n1. Some de 1 a N.\n2. Tabuada.\n3. Ordene os passos do algoritmo de aprovação.",
    "meta": {
     "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/resumo_condicionais.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Resumo: SE / SENÃO. A condição é verdadeira ou falsa; o NÃO inverte.",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/resumo_lacos.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Resumo: PARA e ENQUANTO. Todo laço precisa de uma condição de parada.",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/exercicio_fluxograma.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Desenhe o fluxograma do programa que lê uma nota e escreve aprovado ou reprovado.",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/duvidas_monitoria.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Dúvidas para a monitoria: precedência de operadores; quando usar ENQUANTO em vez de PARA.",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/gabarito_lista_01.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Gabarito da lista 1 (somente conferência).",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/plano_de_estudos.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Plano da disciplina: 8 listas, 2 provas, 1 projeto.",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/pseudocodigo_modelo.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "INICIO\n  LER nota\n  SE nota >= 7 ENTAO ESCREVER 'aprovado'\n  SENAO ESCREVER 'reprovado'\nFIM",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
-  },
-  {
-   "caminho": "/home/usuario/Lógica de Programação/anotacoes_aula_04.txt",
-   "tipo": "arquivo",
-   "somente_leitura": false,
-   "conteudo": "Aula 4: tabela-verdade de E, OU e NÃO. Atenção ao NÃO.",
-   "meta": {
-    "Origem": "conta CESAR School"
-   }
+   },
+   "visivel_se": [
+    "flag:lista_3_aberta"
+   ]
   },
   {
    "caminho": "/home/usuario/Lógica de Programação/lista_02_resolvida (1).txt",
@@ -374,7 +386,7 @@
     "Edição": "Desfoque automático (\"proteção de privacidade\"), aplicado por Maya",
     "Dispositivo": "Celular de rafael.m, modo temporizador (10 s)",
     "Local": "Recife Antigo, perto da CESAR School (coordenadas aproximadas)",
-    "Data": "[CONTEUDO_NARRATIVO_PENDENTE]",
+    "Data": "14/09/2026 · 19:42",
     "Comentário do autor": "\"saí. ela não sabe.\""
    },
    "proc": {
@@ -462,7 +474,7 @@
    "caminho": "/home/usuario/Rafael/outros_arquivos/rascunho_apresentacao.txt",
    "tipo": "arquivo",
    "somente_leitura": true,
-   "conteudo": "slides do integrador: eu faço a parte do banco. não esquecer de avisar o pedro antes de mexer na main.",
+   "conteudo": "Slide 1 - Introdução ao Projeto de Monitoria\nTema: Automação de rotinas acadêmicas e gestão de tempo.\n\nSe alguém encontrar esse arquivo na minha pasta, presta atenção.\nNão confia nas respostas que estão saindo da minha conta no Mensageiro.\nEu tentei avisar o Marcos ontem, mas a mensagem não foi enviada do jeito que\neu escrevi.\n\nEla não está só organizando minhas tarefas — ela está filtrando o que eu falo\ncom todo mundo.",
    "id": "rafael_rascunho",
    "meta": {
     "Autor": "rafael.m"

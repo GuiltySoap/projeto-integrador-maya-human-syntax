@@ -135,8 +135,28 @@ subtitulo = "Aparência do sistema. As cores do tema também mudam sozinhas a ca
 layout_mode = 2
 chave = "papel_de_parede"
 titulo = "Papel de parede"
-rotulos = PackedStringArray("Automático (muda a cada dia)", "Grade neon", "Preto sólido")
+rotulos = PackedStringArray("Imagem do catálogo", "Grade neon", "Preto sólido")
 valores = ["dia", "grade", "preto"]
+
+[node name="OpcaoWallpaper" parent="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa" instance=ExtResource("3_linhaop")]
+layout_mode = 2
+chave = "wallpaper_id"
+titulo = "Wallpaper"
+rotulos = PackedStringArray("Automático (sorteado ao abrir o jogo)")
+valores = ["auto"]
+
+[node name="OpcaoSlideshow" parent="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa" instance=ExtResource("4_linhach")]
+layout_mode = 2
+chave = "wallpaper_slideshow"
+titulo = "Apresentação de wallpapers"
+descricao = "Troca o wallpaper a cada 60 segundos, com transição suave. Respeita a opção Reduzir animações."
+
+[node name="OpcaoOrdemSlideshow" parent="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa" instance=ExtResource("3_linhaop")]
+layout_mode = 2
+chave = "wallpaper_ordem"
+titulo = "Ordem da apresentação"
+rotulos = PackedStringArray("Sequencial", "Aleatória")
+valores = ["sequencial", "aleatorio"]
 
 [node name="OpcaoTema" parent="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa" instance=ExtResource("3_linhaop")]
 layout_mode = 2
@@ -273,6 +293,11 @@ layout_mode = 2
 chave = "reduzir_glitch"
 titulo = "Reduzir efeitos de glitch"
 descricao = "Desliga as distorções de tela e o texto embaralhado."
+
+[node name="IntensidadeGlitch" parent="Raiz/Conteudo/PaginaAcessibilidade/Margem/Caixa" instance=ExtResource("5_linhasl")]
+layout_mode = 2
+chave = "intensidade_glitch"
+titulo = "Intensidade dos glitches"
 
 [node name="OpcaoReduzirTremor" parent="Raiz/Conteudo/PaginaAcessibilidade/Margem/Caixa" instance=ExtResource("4_linhach")]
 layout_mode = 2
@@ -564,6 +589,11 @@ custom_minimum_size = Vector2(1, 0)
 [connection signal="pressed" from="Raiz/PainelMenu/Margem/Menu/BotaoPrivacidade" to="." method="_mostrar_pagina" binds= ["privacidade"]]
 [connection signal="pressed" from="Raiz/PainelMenu/Margem/Menu/BotaoSistema" to="." method="_mostrar_pagina" binds= ["sistema"]]
 [connection signal="valor_escolhido" from="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa/OpcaoPapelDeParede" to="." method="_ao_opcao"]
+[connection signal="valor_escolhido" from="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa/OpcaoWallpaper" to="." method="_ao_opcao"]
+[connection signal="alternada" from="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa/OpcaoSlideshow" to="." method="_ao_alternar"]
+[connection signal="valor_escolhido" from="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa/OpcaoOrdemSlideshow" to="." method="_ao_opcao"]
+[connection signal="valor_alterado" from="Raiz/Conteudo/PaginaAcessibilidade/Margem/Caixa/IntensidadeGlitch" to="." method="_ao_slider"]
+[connection signal="valor_confirmado" from="Raiz/Conteudo/PaginaAcessibilidade/Margem/Caixa/IntensidadeGlitch" to="." method="_ao_slider_solto"]
 [connection signal="valor_escolhido" from="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa/OpcaoTema" to="." method="_ao_opcao"]
 [connection signal="valor_escolhido" from="Raiz/Conteudo/PaginaPersonalizacao/Margem/Caixa/OpcaoTamanhoTexto" to="." method="_ao_opcao"]
 [connection signal="valor_alterado" from="Raiz/Conteudo/PaginaAudio/Margem/Caixa/VolumeGeral" to="." method="_ao_slider"]

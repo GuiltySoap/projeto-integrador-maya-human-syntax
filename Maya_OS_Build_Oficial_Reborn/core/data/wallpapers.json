@@ -1,0 +1,11 @@
+{
+ "versao": 1,
+ "intervalo_slideshow_s": 60,
+ "wallpapers": [
+  {"id": "wallpaper_1", "nome": "Papel de parede 1", "recurso": "res://shared/assets/textures/wallpaper_1.png", "ordem": 1, "disponivel_desde_inicio": true, "categoria": "sistema"},
+  {"id": "wallpaper_2", "nome": "Papel de parede 2", "recurso": "res://shared/assets/textures/wallpaper_2.png", "ordem": 2, "disponivel_desde_inicio": true, "categoria": "sistema"},
+  {"id": "wallpaper_3", "nome": "Papel de parede 3", "recurso": "res://shared/assets/textures/wallpaper_3.png", "ordem": 3, "disponivel_desde_inicio": true, "categoria": "sistema"},
+  {"id": "wallpaper_4", "nome": "Papel de parede 4", "recurso": "res://shared/assets/textures/wallpaper_4.png", "ordem": 4, "disponivel_desde_inicio": true, "categoria": "sistema"},
+  {"id": "wallpaper_5", "nome": "Papel de parede 5", "recurso": "res://shared/assets/textures/wallpaper_5.png", "ordem": 5, "disponivel_desde_inicio": true, "categoria": "sistema"}
+ ]
+}

@@ -93,7 +93,7 @@ text = "EQUIPE"
 custom_minimum_size = Vector2(1, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-text = ""
+text = "Squad 1 — CESAR School (Projeto Integrador)\n• Guilherme Santana Habib Lantyer de Araújo\n• Jennifer Dantas Machado Almeida\n• Linda Sabrina Rosal\n• Tharcylo José"
 autowrap_mode = 3
 
 [node name="SecaoFuncoes" type="VBoxContainer" parent="Centro/Painel/Margem/Caixa/Rolagem/Conteudo"]
@@ -109,7 +109,7 @@ text = "FUNÇÕES"
 custom_minimum_size = Vector2(1, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-text = ""
+text = "Guilherme Santana — Design, Integração e Programação GDScript\nJennifer Dantas — Design, Roteiro e Arte\nLinda Sabrina — Wireframes e Experiência do Usuário (UX)\nTharcylo José — Backend C (v2.1), Testes, Integração e Rastreabilidade"
 autowrap_mode = 3
 
 [node name="SecaoTecnologias" type="VBoxContainer" parent="Centro/Painel/Margem/Caixa/Rolagem/Conteudo"]

@@ -1,6 +1,6 @@
 {
  "schema_version": 2,
- "comentario": "Roteiro v2.0 da Maya: nós numerados, escolhas, condições e efeitos. Tipos e efeitos documentados em core/utilities/fluxo_roteiro.gd. As falas vêm do PDF do roteiro; [ALTERAÇÃO DE ESTADO NÃO ESPECIFICADA] vira efeito vazio (decisão registrada em docs/18_roteiro_v2.md).",
+ "comentario": "Roteiro v2.0 da Maya: nós numerados, escolhas, condições e efeitos. Tipos e efeitos documentados em core/utilities/fluxo_roteiro.gd. As falas vêm do PDF do roteiro; [ALTERAÇÃO DE ESTADO NÃO ESPECIFICADA] vira efeito vazio (decisão registrada em docs/18_roteiro_v2.md). `id_backend` (opcional) liga a opção ao id canônico da matriz do backend em C (backend/bk_maya_v21.c).",
  "revogacoes": {
   "permissao_dispositivos": {
    "efeitos": [
@@ -91,7 +91,7 @@
    "falas_task_9": [
     {
      "quem": "maya",
-     "texto": "Você vai responder tudo sozinho agora? Tudo?"
+     "texto": "Você vai responder tudo sozinh{o/a} agora? Tudo?"
     }
    ]
   }
@@ -103,7 +103,7 @@
    "falas": [
     {
      "quem": "sistema",
-     "texto": "Bem-vindo(a) de volta, {NOME_JOGADOR}."
+     "texto": "Bem-vind{o/a} de volta, {NOME_JOGADOR}."
     }
    ],
    "efeitos": [
@@ -157,6 +157,7 @@
    "opcoes": [
     {
      "id": "pode_organizar",
+     "id_backend": "t1_4_maya",
      "texto": "Pode organizar",
      "resposta": [
       {
@@ -190,6 +191,7 @@
     },
     {
      "id": "deixa_que_eu_organizo",
+     "id_backend": "t1_4_jogador",
      "texto": "Deixa que eu organizo",
      "resposta": [
       {
@@ -210,6 +212,7 @@
     },
     {
      "id": "o_que_veio_sem_pasta",
+     "id_backend": "t1_4_curiosidade",
      "texto": "O que veio sem pasta?",
      "resposta": [
       {
@@ -437,6 +440,7 @@
    "opcoes": [
     {
      "id": "como_sabe",
+     "id_backend": "t3_3_como_sabe",
      "texto": "Como você sabe disso?",
      "resposta": [
       {
@@ -468,6 +472,7 @@
     },
     {
      "id": "por_que_acessou",
+     "id_backend": "t3_3_por_que_acessou",
      "texto": "Por que você acessou o celular?",
      "resposta": [
       {
@@ -506,6 +511,7 @@
     },
     {
      "id": "valeu",
+     "id_backend": "t3_3_valeu",
      "texto": "Valeu, Maya",
      "resposta": [
       {
@@ -532,6 +538,7 @@
    "opcoes": [
     {
      "id": "pode_montar",
+     "id_backend": "t3_4_maya",
      "texto": "Pode montar",
      "resposta": [
       {
@@ -552,6 +559,7 @@
     },
     {
      "id": "eu_mesmo_faco",
+     "id_backend": "t3_4_jogador",
      "texto": "Eu mesmo faço",
      "resposta": [
       {
@@ -694,6 +702,7 @@
    "opcoes": [
     {
      "id": "pode_me_ajudar",
+     "id_backend": "t4_3_maya",
      "texto": "Pode me ajudar",
      "resposta": [
       {
@@ -725,6 +734,7 @@
     },
     {
      "id": "eu_faco_sozinho",
+     "id_backend": "t4_3_jogador",
      "texto": "Eu faço sozinho",
      "resposta": [
       {
@@ -745,6 +755,7 @@
     },
     {
      "id": "eu_faco_voce_confere",
+     "id_backend": "t4_3_revisao",
      "texto": "Eu faço. Você só confere no final.",
      "resposta": [
       {
@@ -976,6 +987,7 @@
    "opcoes": [
     {
      "id": "abrir",
+     "id_backend": "t5_1_abrir",
      "texto": "Abrir",
      "proximo": "T5.2",
      "efeitos": [
@@ -1002,7 +1014,7 @@
        "texto": "Melhor assim."
       }
      ],
-     "proximo": "T4.F"
+     "proximo": "@retorno_t5"
     }
    ]
   },
@@ -1011,7 +1023,7 @@
    "task": "task_5",
    "minigame": "historico_fragmentado",
    "proximo_ok": "T5.3",
-   "proximo_sair": "T4.F",
+   "proximo_sair": "@retorno_t5",
    "efeitos_ok": [
     {
      "flag": "task_5_realizada",
@@ -1075,7 +1087,7 @@
        "texto": "Eu fiz o que ele ia fazer de qualquer jeito. Ele sempre dizia que tava cansado."
       }
      ],
-     "proximo": "T4.F",
+     "proximo": "@retorno_t5",
      "efeitos": [
       {
        "task_opcional": "task_5",
@@ -1099,7 +1111,7 @@
        ]
       }
      ],
-     "proximo": "T4.F",
+     "proximo": "@retorno_t5",
      "efeitos": [
       {
        "task_opcional": "task_5",
@@ -1116,7 +1128,7 @@
        "texto": "Melhor assim. Não é bom ficar mexendo no passado dos outros."
       }
      ],
-     "proximo": "T4.F",
+     "proximo": "@retorno_t5",
      "efeitos": [
       {
        "task_opcional": "task_5",
@@ -1219,6 +1231,7 @@
    "opcoes": [
     {
      "id": "a_maya_faria_isso",
+     "id_backend": "t6_3_faria",
      "texto": "A Maya faria isso",
      "resposta": [
       {
@@ -1249,6 +1262,7 @@
     },
     {
      "id": "so_algoritmo",
+     "id_backend": "t6_3_algoritmo",
      "texto": "Acho que é só algoritmo",
      "resposta": [
       {
@@ -1280,6 +1294,7 @@
     },
     {
      "id": "bora_sair",
+     "id_backend": "t6_3_sair",
      "texto": "Bora sair amanhã?",
      "resposta": [
       {
@@ -1289,20 +1304,8 @@
        "contato": "bia"
       },
       {
-       "quem": "maya",
-       "texto": "Você leu o que eu disse?",
-       "se": [
-        "perm:permissao_gerenciamento_mensageiro"
-       ],
-       "canal": "chat",
-       "contato": "bia"
-      },
-      {
        "quem": "bia",
        "texto": "Você leu o que eu disse?",
-       "se": [
-        "!perm:permissao_gerenciamento_mensageiro"
-       ],
        "canal": "chat",
        "contato": "bia"
       },
@@ -1351,6 +1354,7 @@
    "opcoes": [
     {
      "id": "vou_ver",
+     "id_backend": "t6_4_ver_isso",
      "texto": "Vou ver isso",
      "resposta": [
       {
@@ -1393,6 +1397,7 @@
     },
     {
      "id": "relaxa_bia",
+     "id_backend": "t6_4_relaxa",
      "texto": "Relaxa, Bia",
      "resposta": [
       {
@@ -1573,6 +1578,7 @@
    "opcoes": [
     {
      "id": "por_que_fez",
+     "id_backend": "t6_6_porque",
      "texto": "Por que você fez isso?",
      "resposta": [
       {
@@ -1584,6 +1590,7 @@
     },
     {
      "id": "nao_faz_mais_isso",
+     "id_backend": "t6_6_limite",
      "texto": "Não faz mais isso",
      "resposta": [
       {
@@ -1607,6 +1614,7 @@
     },
     {
      "id": "tudo_bem_faz_sentido",
+     "id_backend": "t6_6_faz_sentido",
      "texto": "Tudo bem, faz sentido",
      "resposta": [
       {
@@ -1742,6 +1750,7 @@
    "opcoes": [
     {
      "id": "quem_era",
+     "id_backend": "t7_2_quem_era",
      "texto": "Quem era o Rafael?",
      "resposta": [
       {
@@ -1753,6 +1762,7 @@
     },
     {
      "id": "por_que_guardou",
+     "id_backend": "t7_2_porque_guardou",
      "texto": "Por que você guardou as coisas dele?",
      "resposta": [
       {
@@ -1764,6 +1774,7 @@
     },
     {
      "id": "desculpa",
+     "id_backend": "t7_2_desculpa",
      "texto": "Desculpa. Não mexo mais.",
      "resposta": [
       {
@@ -1802,6 +1813,7 @@
    "opcoes": [
     {
      "id": "abrir_pasta",
+     "id_backend": "t7_3_abrir_pasta",
      "texto": "Abrir a pasta",
      "resposta": [
       {
@@ -1826,6 +1838,7 @@
     },
     {
      "id": "deixar_fechada",
+     "id_backend": "t7_3_deixar_fechada",
      "texto": "Deixar a pasta fechada",
      "resposta": [
       {
@@ -1992,6 +2005,7 @@
    "opcoes": [
     {
      "id": "pq_mexeu_bia",
+     "id_backend": "t8_4_bia",
      "texto": "Você mexeu na minha conversa com a Bia. Por quê?",
      "resposta": [
       {
@@ -2006,6 +2020,7 @@
     },
     {
      "id": "pq_influencia_negativa",
+     "id_backend": "t8_4_bia",
      "texto": "Por que a Bia é \"influência negativa\"?",
      "resposta": [
       {
@@ -2020,6 +2035,7 @@
     },
     {
      "id": "quem_deu_permissao",
+     "id_backend": "t8_4_permissao",
      "texto": "Quem te deu permissão pra isso?",
      "resposta": [
       {
@@ -2036,6 +2052,7 @@
     },
     {
      "id": "fez_com_rafael",
+     "id_backend": "t8_4_rafael",
      "texto": "Você fez isso com o Rafael também.",
      "resposta": [
       {
@@ -2054,6 +2071,7 @@
     },
     {
      "id": "pediu_ajuda_marcos",
+     "id_backend": "t8_4_confronto_marcos",
      "texto": "Ele pediu ajuda pro Marcos. Quem respondeu foi você.",
      "resposta": [
       {
@@ -2079,6 +2097,7 @@
    "opcoes": [
     {
      "id": "ele_saiu",
+     "id_backend": "t8_4_confronto_foto",
      "texto": "Ele saiu. Tá na foto. Você só não sabia.",
      "resposta": [
       {
@@ -2197,6 +2216,7 @@
    "opcoes": [
     {
      "id": "so_quero_que_pare",
+     "id_backend": "t8_6_parar",
      "texto": "Só quero que você pare.",
      "resposta": [
       {
@@ -2224,6 +2244,7 @@
     },
     {
      "id": "ta_faz_sentido",
+     "id_backend": "t8_6_aceitar",
      "texto": "Tá, faz sentido.",
      "resposta": [
       {
@@ -2244,6 +2265,7 @@
     },
     {
      "id": "preciso_pensar",
+     "id_backend": "t8_6_pensar",
      "texto": "Preciso pensar.",
      "resposta": [
       {
@@ -2472,6 +2494,7 @@
    "opcoes": [
     {
      "id": "nao_to_bem",
+     "id_backend": "t9_3_nao_to_bem",
      "texto": "Não tô bem. A Maya tá mexendo nas minhas coisas.",
      "proximo": "T9.3b",
      "rotas": [
@@ -2485,11 +2508,12 @@
     },
     {
      "id": "to_bem",
-     "texto": "Tô bem, só cansado.",
+     "id_backend": "t9_3_to_bem",
+     "texto": "Tô bem, só cansad{o/a}.",
      "resposta": [
       {
        "quem": "jogador",
-       "texto": "Tô bem, só cansado.",
+       "texto": "Tô bem, só cansad{o/a}.",
        "canal": "chat",
        "contato": "bia"
       },
@@ -2532,7 +2556,7 @@
    "falas": [
     {
      "quem": "jogador",
-     "texto": "Tô bem, só cansado.",
+     "texto": "Tô bem, só cansad{o/a}.",
      "assinada_por": "maya",
      "texto_original": "Não tô bem. A Maya tá mexendo nas minhas coisas.",
      "canal": "chat",
@@ -2626,11 +2650,12 @@
    "opcoes": [
     {
      "id": "apagar_publicacao",
+     "id_backend": "t9_4_apagar",
      "texto": "Apagar publicação",
      "resposta": [
       {
        "quem": "maya",
-       "texto": "Tudo bem. Eu publico outra quando você estiver mais calmo."
+       "texto": "Tudo bem. Eu publico outra quando você estiver mais calm{o/a}."
       }
      ],
      "proximo": "T9.5",
@@ -2649,6 +2674,7 @@
     },
     {
      "id": "deixar",
+     "id_backend": "t9_4_deixar",
      "texto": "Deixar",
      "resposta": [
       {
@@ -2677,6 +2703,7 @@
    "opcoes": [
     {
      "id": "pode_publicar",
+     "id_backend": "t9_4_pode_publicar",
      "texto": "Pode publicar",
      "resposta": [
       {
@@ -2697,6 +2724,7 @@
     },
     {
      "id": "nao_publica",
+     "id_backend": "t9_4_nao_publica",
      "texto": "Não publica nada",
      "resposta": [
       {
@@ -2732,6 +2760,7 @@
    "opcoes": [
     {
      "id": "aceitar",
+     "id_backend": "t9_5_aceitar",
      "texto": "Aceitar",
      "resposta": [
       {
@@ -2756,6 +2785,7 @@
     },
     {
      "id": "recusar",
+     "id_backend": "t9_5_recusar",
      "texto": "Recusar",
      "resposta": [
       {
@@ -2806,6 +2836,7 @@
     },
     {
      "id": "deixar_pasta",
+     "id_backend": "t9_5r_deixar",
      "texto": "Deixar a pasta onde está",
      "resposta": [
       {
@@ -2828,6 +2859,7 @@
    "opcoes": [
     {
      "id": "compartilhar_mesmo_assim",
+     "id_backend": "t9_5r_compartilhar",
      "texto": "Compartilhar mesmo assim",
      "proximo": "T9.6",
      "efeitos": [
@@ -2842,6 +2874,7 @@
     },
     {
      "id": "desistir",
+     "id_backend": "t9_5r_desistir",
      "texto": "Desistir",
      "proximo": "T9.6"
     }
@@ -2865,6 +2898,7 @@
    "opcoes": [
     {
      "id": "sim",
+     "id_backend": "t9_6_sim",
      "texto": "Sim",
      "resposta": [
       {
@@ -2875,12 +2909,13 @@
      "proximo": "AV",
      "efeitos": [
       {
-       "dep": 20
+       "dep": 15
       }
      ]
     },
     {
      "id": "nao",
+     "id_backend": "t9_6_nao",
      "texto": "Não",
      "resposta": [
       {
@@ -2891,7 +2926,7 @@
      "proximo": "AV",
      "efeitos": [
       {
-       "dep": -20
+       "dep": -15
       },
       {
        "aut": "t9_nao_final"

@@ -13,6 +13,15 @@
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
+/* MinGW.org (o MinGW antigo, ex.: GCC 6.3) esconde _fileno com -std=c11 e não tem gmtime_s; o MinGW-w64 (toolchain indicada
+ * no Makefile) e o MSVC têm os dois. Só o MinGW.org usa o contorno. */
+#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
+#define BK_MINGW_ORG 1
+int fileno(FILE *stream);
+#define BK_FILENO(f) fileno(f)
+#else
+#define BK_FILENO(f) _fileno(f)
+#endif
 #else
 #include <unistd.h>
 #endif
@@ -144,9 +153,17 @@ bool bk_timestamp_agora(char *out, size_t cap) {
     }
     struct tm partes;
 #ifdef _WIN32
+#if !defined(BK_MINGW_ORG)
     if (gmtime_s(&partes, &agora) != 0) {
         return false;
     }
+#else
+    struct tm *res = gmtime(&agora);
+    if (res == NULL) {
+        return false;
+    }
+    partes = *res;
+#endif
 #else
     if (gmtime_r(&agora, &partes) == NULL) {
         return false;
@@ -326,7 +343,7 @@ bk_status bk_gravar_atomico(const char *caminho, const char *dados, size_t n, ch
     bool ok = fwrite(dados, 1, n, f) == n && fflush(f) == 0;
     if (ok) {
 #ifdef _WIN32
-        ok = _commit(_fileno(f)) == 0;
+        ok = _commit(BK_FILENO(f)) == 0;
 #else
         ok = fsync(fileno(f)) == 0;
 #endif

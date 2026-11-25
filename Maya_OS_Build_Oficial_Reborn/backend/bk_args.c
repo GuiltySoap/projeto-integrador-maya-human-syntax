@@ -142,6 +142,37 @@ bk_status bk_args_interpretar(int argc, char *const argv[], bk_args *out, char *
             out->tem_timestamp = true;
             continue;
         }
+        r = opcao_com_valor(argc, argv, &i, "--v21-choice", &valor);
+        if (r != 0) {
+            if (r < 0) {
+                bk_err(err, cap, "--v21-choice exige um id (ex.: --v21-choice t1_4_maya)");
+                return BK_ERR_ARG;
+            }
+            if (out->tem_escolha_v21 || out->tem_escolha) {
+                bk_err(err, cap, "argumento duplicado ou conflitante: --v21-choice");
+                return BK_ERR_ARG;
+            }
+            if (!bk_id_valido(valor)) {
+                bk_err(err, cap, "id de escolha v2.1 invalido (1 a %d caracteres: [a-z][a-z0-9_]*)", BK_ID_MAX);
+                return BK_ERR_ID_FORMATO;
+            }
+            (void)bk_copiar(out->escolha_v21, sizeof out->escolha_v21, valor);
+            out->tem_escolha_v21 = true;
+            continue;
+        }
+        r = opcao_com_valor(argc, argv, &i, "--nome", &valor);
+        if (r != 0) {
+            if (r < 0 || out->tem_nome) {
+                bk_err(err, cap, r < 0 ? "--nome exige um texto" : "argumento duplicado: --nome");
+                return BK_ERR_ARG;
+            }
+            if (!bk_copiar(out->nome, sizeof out->nome, valor) || out->nome[0] == '\0') {
+                bk_err(err, cap, "--nome vazio ou acima de 63 bytes");
+                return BK_ERR_LIMITE;
+            }
+            out->tem_nome = true;
+            continue;
+        }
         if (arg[0] == '-') {
             bk_err(err, cap, "argumento desconhecido: %.40s", arg);
         } else {

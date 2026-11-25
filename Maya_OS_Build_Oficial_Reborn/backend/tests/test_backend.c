@@ -12,6 +12,7 @@
 #include "../bk_comando.h"
 #include "../bk_common.h"
 #include "../bk_estado.h"
+#include "../bk_maya_v21.h"
 #include "../cJSON.h"
 #include "../game.h"
 #include "../json_loader.h"
@@ -24,6 +25,27 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#include <windows.h>
+#define mkdir(d, m) _mkdir(d)
+#define rmdir(d) _rmdir(d)
+#define dup2(a, b) _dup2(a, b)
+static char *win_mkdtemp(char *tmpl) {
+    const char *tmp = getenv("TEMP");
+    if (tmp == NULL || tmp[0] == '\0') tmp = getenv("TMP");
+    if (tmp == NULL || tmp[0] == '\0') tmp = ".";
+    snprintf(tmpl, 256, "%s/maya_bk_%u", tmp, (unsigned)GetTickCount());
+    if (_mkdir(tmpl) != 0) return NULL;
+    return tmpl;
+}
+#define mkdtemp(t) win_mkdtemp(t)
+#define BK_NULO "NUL"
+#else
+#define BK_NULO "/dev/null"
+#endif
 
 #ifndef BK_CHOICES_PATH
 #define BK_CHOICES_PATH "backend/choices.json"
@@ -628,7 +650,7 @@ static int g_stdout_salvo = -1;
 static void silenciar_stdout(void) {
     fflush(stdout);
     g_stdout_salvo = dup(1);
-    if (freopen("/dev/null", "w", stdout) == NULL) {
+    if (freopen(BK_NULO, "w", stdout) == NULL) {
         fprintf(stderr, "aviso: nao foi possivel silenciar stdout\n");
     }
 }
@@ -782,6 +804,331 @@ static void teste_interativo(void) {
     CHECK(executar_turno(NULL, &t) == BK_ERR_ARG && executar_turno(&g, NULL) == BK_ERR_ARG);
 }
 
+/* ------------------------------------------------------------------ modo interativo: formato "dialogue" (roteiro Maya v2) */
+#define DLG_NO_B "{\"id\":\"b\",\"task\":\"T2\",\"text\":\"fim\",\"next\":\"END\"}"
+#define DLG_ESC1 "{\"id\":1,\"text\":\"sim\",\"dependency_delta\":10,\"delegada\":true,\"reply_text\":\"ok\",\"next\":\"b\"}"
+#define DLG_ESC2 "{\"id\":2,\"text\":\"nao\",\"dependency_delta\":-10,\"delegada\":false,\"reply_text\":\"tudo bem\",\"next\":\"END\"}"
+#define DLG_OK "{\"start_node\":\"a\",\"dialogue\":[{\"id\":\"a\",\"task\":\"T1\",\"speaker\":\"MAYA\",\"text\":\"oi\",\"choices\":[" DLG_ESC1 "," DLG_ESC2 "]}," DLG_NO_B "]}"
+
+static void novo_jogo(GameState *g, int autonomia) {
+    memset(g, 0, sizeof *g);
+    g->autonomia = autonomia;
+}
+
+static bk_status jogar_dialogo(const char *json, const char *entrada, GameState *g, char *err, size_t cap) {
+    char p[512];
+    escrever("dlg.json", json);
+    escrever("dlg_in.txt", entrada);
+    caminho_em(p, sizeof p, "dlg.json");
+    err[0] = '\0';
+    silenciar_stdout();
+    stdin_de("dlg_in.txt");
+    bk_status st = executar_jogo(p, g, err, cap);
+    restaurar_stdout();
+    return st;
+}
+
+/* Roteiro inválido: recusado ANTES de pedir qualquer entrada (stdin vazio), com o código e um trecho esperado na mensagem. */
+static void dialogo_recusado(const char *json, bk_status esperado, const char *trecho) {
+    char err[BK_ERR_MSG_MAX];
+    GameState g;
+    novo_jogo(&g, 50);
+    bk_status st = jogar_dialogo(json, "", &g, err, sizeof err);
+    CHECK(st == esperado);
+    CHECK(trecho == NULL || strstr(err, trecho) != NULL);
+    if (st != esperado || (trecho != NULL && strstr(err, trecho) == NULL)) {
+        fprintf(stderr, "  (esperado %d '%s', obtido %d: %s)\n", (int)esperado, trecho != NULL ? trecho : "", (int)st, err);
+    }
+}
+
+static void teste_dialogo(void) {
+    char err[BK_ERR_MSG_MAX];
+    GameState g;
+
+    /* rota 1: header T1, fala, escolha 1, [SISTEMA], [MAYA], header T2, fala de b -> END. dependency_delta +10 = -10 de autonomia */
+    novo_jogo(&g, 50);
+    CHECK(jogar_dialogo(DLG_OK, "\n\n1\n\n\n\n\n", &g, err, sizeof err) == BK_OK);
+    CHECK(g.autonomia == 40);
+    CHECK(strcmp(g.scene_title, "T2") == 0);                  /* passou pelo nó b */
+    /* rota 2: escolha 2 vai direto para END (b não é visitado) */
+    novo_jogo(&g, 50);
+    CHECK(jogar_dialogo(DLG_OK, "\n\n2\n\n\n", &g, err, sizeof err) == BK_OK);
+    CHECK(g.autonomia == 60);
+    CHECK(strcmp(g.scene_title, "T1") == 0);
+    /* entradas inválidas na escolha são repetidas, não aceitas */
+    novo_jogo(&g, 50);
+    CHECK(jogar_dialogo(DLG_OK, "\n\nabc\n7\n\n2\n\n\n", &g, err, sizeof err) == BK_OK && g.autonomia == 60);
+    /* autonomia continua presa a 0..100 */
+    novo_jogo(&g, 95);
+    CHECK(jogar_dialogo(DLG_OK, "\n\n2\n\n\n", &g, err, sizeof err) == BK_OK && g.autonomia == 100);
+    novo_jogo(&g, 5);
+    CHECK(jogar_dialogo(DLG_OK, "\n\n1\n\n\n\n\n", &g, err, sizeof err) == BK_OK && g.autonomia == 0);
+    /* a entrada acaba no meio: erro de E/S COM mensagem (antes saía "[ERRO] " vazio) */
+    novo_jogo(&g, 50);
+    CHECK(jogar_dialogo(DLG_OK, "\n\n", &g, err, sizeof err) == BK_ERR_IO && strstr(err, "entrada terminou") != NULL);
+    /* ciclo COM escolha é legítimo (o jogador decide sair) */
+    novo_jogo(&g, 50);
+    CHECK(jogar_dialogo("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"de novo\",\"next\":\"a\"},"
+                        "{\"id\":2,\"text\":\"sair\",\"next\":\"END\"}]}]}",
+                        "\n1\n\n\n\n2\n\n\n", &g, err, sizeof err) == BK_OK);
+    /* sem start_node: começa no primeiro nó; campos opcionais ausentes usam os padrões */
+    novo_jogo(&g, 50);
+    CHECK(jogar_dialogo("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"next\":\"END\"}]}", "\n", &g, err, sizeof err) == BK_OK);
+
+    /* roteiros inválidos: recusados com erro claro, antes de jogar */
+    dialogo_recusado("{\"start_node\":\"a\",\"dialogue\":[{\"id\":\"a\",\"text\":\"oi\",\"choices\":["
+                     "{\"id\":1,\"text\":\"s\",\"next\":\"zzz\"}]}]}", BK_ERR_ESQUEMA, "zzz");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"next\":\"nao_existe\"}]}", BK_ERR_ESQUEMA, "nao_existe");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"next\":\"b\"},{\"id\":\"b\",\"text\":\"y\",\"next\":\"a\"}]}",
+                     BK_ERR_ESQUEMA, "ciclo");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"next\":\"END\"},{\"id\":\"a\",\"text\":\"y\",\"next\":\"END\"}]}",
+                     BK_ERR_ESQUEMA, "repetido");
+    dialogo_recusado("{\"start_node\":\"q\",\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"next\":\"END\"}]}", BK_ERR_ESQUEMA, "start_node");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\"}]}", BK_ERR_ESQUEMA, "next");
+    dialogo_recusado("{\"dialogue\":[]}", BK_ERR_ESQUEMA, "vazio");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"END\",\"text\":\"x\",\"next\":\"END\"}]}", BK_ERR_ESQUEMA, "reservado");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"next\":\"END\"}]}", BK_ERR_ESQUEMA, "'text'");
+    dialogo_recusado("{\"dialogue\":[{\"text\":\"x\",\"next\":\"END\"}]}", BK_ERR_ESQUEMA, "'id'");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":{}}]}", BK_ERR_ESQUEMA, "choices");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1.5,\"text\":\"s\",\"next\":\"END\"}]}]}",
+                     BK_ERR_ESQUEMA, "'id'");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"s\",\"dependency_delta\":1000,\"next\":\"END\"}]}]}",
+                     BK_ERR_ESQUEMA, "dependency_delta");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"s\",\"delegada\":\"sim\",\"next\":\"END\"}]}]}",
+                     BK_ERR_ESQUEMA, "delegada");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"s\",\"next\":\"END\"},"
+                     "{\"id\":1,\"text\":\"t\",\"next\":\"END\"}]}]}", BK_ERR_ESQUEMA, "repetido");
+    dialogo_recusado("{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"s\"}]}]}", BK_ERR_ESQUEMA, "next");
+    /* limites duros: texto, locutor e título longos demais e escolhas demais são RECUSADOS (antes viravam texto vazio ou sumiam) */
+    {
+        static char grande[2400];
+        static char js[3000];
+        memset(grande, 'A', 600);
+        grande[600] = '\0';
+        snprintf(js, sizeof js, "{\"dialogue\":[{\"id\":\"a\",\"text\":\"%s\",\"next\":\"END\"}]}", grande);
+        dialogo_recusado(js, BK_ERR_LIMITE, "no 'a'");
+        grande[300] = '\0';
+        snprintf(js, sizeof js, "{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"%s\",\"next\":\"END\"}]}]}", grande);
+        dialogo_recusado(js, BK_ERR_LIMITE, "'text'");
+        snprintf(js, sizeof js, "{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[{\"id\":1,\"text\":\"s\",\"reply_text\":\"%s\",\"next\":\"END\"}]}]}", grande);
+        dialogo_recusado(js, BK_ERR_LIMITE, "reply_text");
+        grande[40] = '\0';
+        snprintf(js, sizeof js, "{\"dialogue\":[{\"id\":\"a\",\"speaker\":\"%s\",\"text\":\"x\",\"next\":\"END\"}]}", grande);
+        dialogo_recusado(js, BK_ERR_LIMITE, "speaker");
+        grande[200] = '\0';
+        memset(grande, 'B', 200);
+        snprintf(js, sizeof js, "{\"dialogue\":[{\"id\":\"a\",\"task\":\"%s\",\"text\":\"x\",\"next\":\"END\"}]}", grande);
+        dialogo_recusado(js, BK_ERR_LIMITE, "task");
+        size_t pos = (size_t)snprintf(js, sizeof js, "{\"dialogue\":[{\"id\":\"a\",\"text\":\"x\",\"choices\":[");
+        for (int i = 0; i < MAX_CHOICES + 1; i++) {
+            pos += (size_t)snprintf(js + pos, sizeof js - pos, "%s{\"id\":%d,\"text\":\"s\",\"next\":\"END\"}", i == 0 ? "" : ",", i + 1);
+        }
+        snprintf(js + pos, sizeof js - pos, "]}]}");
+        dialogo_recusado(js, BK_ERR_LIMITE, "escolhas");
+    }
+
+    /* o roteiro real do projeto passa na validação inteira e o jogo começa (stdin vazio -> para na 1a entrada com BK_ERR_IO) */
+    {
+        escrever("dlg_in.txt", "");
+        novo_jogo(&g, 100);
+        silenciar_stdout();
+        stdin_de("dlg_in.txt");
+        bk_status st = executar_jogo("backend/maya_dialogue.json", &g, err, sizeof err);
+        restaurar_stdout();
+        CHECK(st == BK_ERR_IO);
+        if (st != BK_ERR_IO) {
+            fprintf(stderr, "  (maya_dialogue.json: %d %s)\n", (int)st, err);
+        }
+    }
+
+    /* falha de alocação em qualquer ponto do carregamento do grafo: erro limpo e nada vaza */
+    long base = bk_test_alocacoes_vivas();
+    for (long n = 0; n < 120; n++) {
+        novo_jogo(&g, 50);
+        bk_test_falhar_alocacao_apos(n);
+        bk_status st = jogar_dialogo(DLG_OK, "", &g, err, sizeof err);
+        bk_test_falhar_alocacao_apos(-1);
+        CHECK(st == BK_ERR_MEM || st == BK_ERR_JSON || st == BK_ERR_IO);
+        CHECK(bk_test_alocacoes_vivas() == base);
+    }
+}
+
+/* ------------------------------------------------------------------ Roteiro Revisado v2.1 (Mapeamento Tecnico v2.1) */
+static void aplicar_seq(bk_maya_estado *st, const char *const *ids, size_t n) {
+    char err[BK_ERR_MSG_MAX];
+    for (size_t i = 0; i < n; i++) {
+        CHECK(bk_maya_aplicar_escolha(st, ids[i], err, sizeof err) == BK_OK);
+    }
+}
+
+static void teste_maya_v21(void) {
+    char err[BK_ERR_MSG_MAX];
+    char txt[256];
+    bk_maya_estado st;
+
+    /* 1. Genero dinamico e formatacao de tokens {o/a}, [NOME], {bia_ocultadas_count} */
+    CHECK(bk_maya_inferir_genero_feminino("Erika"));
+    CHECK(bk_maya_inferir_genero_feminino("Beatriz"));
+    CHECK(!bk_maya_inferir_genero_feminino("Antonio"));
+    CHECK(!bk_maya_inferir_genero_feminino("Luca"));
+
+    bk_maya_estado_inicial(&st, "Erika");
+    CHECK(st.genero_feminino && st.dependencia_maya == 50 && st.autonomia_jogador == 0);
+    CHECK(bk_maya_formatar_texto(&st, "Bem-vind{o/a}, [NOME]. Cansad{o/a}?", txt, sizeof txt));
+    CHECK(strcmp(txt, "Bem-vinda, Erika. Cansada?") == 0);
+
+    bk_maya_estado_inicial(&st, "Antonio");
+    CHECK(!st.genero_feminino);
+    CHECK(bk_maya_formatar_texto(&st, "Bem-vind{o/a}, {nome_usuario}. Espert{o/a}!", txt, sizeof txt));
+    CHECK(strcmp(txt, "Bem-vindo, Antonio. Esperto!") == 0);
+
+    /* 2. Acessibilidade T6.5: 3.0s padrao / 6.0s estendido */
+    CHECK(bk_maya_tempo_barra_t65(&st) == 3.0);
+    st.tempo_estendido = true;
+    CHECK(bk_maya_tempo_barra_t65(&st) == 6.0);
+
+    /* 3. Reversao exata de delta em Configuracoes (sem acumulo infinito) */
+    bk_maya_estado_inicial(&st, "Erika");
+    bk_maya_decidir_permissao(&st, BK_PERM_DISPOSITIVOS, true, 5); /* D=55, A=0 */
+    CHECK(st.dependencia_maya == 55 && st.autonomia_jogador == 0 && st.permissoes[BK_PERM_DISPOSITIVOS]);
+    bk_maya_config_toggle_permissao(&st, BK_PERM_DISPOSITIVOS);    /* revoga: D=50, A=1 */
+    CHECK(st.dependencia_maya == 50 && st.autonomia_jogador == 1 && !st.permissoes[BK_PERM_DISPOSITIVOS]);
+    bk_maya_config_toggle_permissao(&st, BK_PERM_DISPOSITIVOS);    /* reativa: desfaz -> D=55, A=0 */
+    CHECK(st.dependencia_maya == 55 && st.autonomia_jogador == 0 && st.permissoes[BK_PERM_DISPOSITIVOS]);
+    /* repetir 5 vezes nao gera farm de A nem de D */
+    for (int i = 0; i < 5; i++) {
+        bk_maya_config_toggle_permissao(&st, BK_PERM_DISPOSITIVOS);
+        bk_maya_config_toggle_permissao(&st, BK_PERM_DISPOSITIVOS);
+    }
+    CHECK(st.dependencia_maya == 55 && st.autonomia_jogador == 0);
+
+    /* 4. Revogacao na Task 9 exige 2 tentativas e zera maya_controla_respostas se Mensageiro */
+    st.permissoes[BK_PERM_MENSAGEIRO] = true;
+    st.maya_controla_respostas = true;
+    CHECK(bk_maya_t9_revogar_permissao(&st, BK_PERM_MENSAGEIRO) == BK_REVOG_ADIADA);
+    CHECK(st.permissoes[BK_PERM_MENSAGEIRO] && st.maya_controla_respostas && st.dependencia_maya == 55 && st.autonomia_jogador == 0);
+    CHECK(bk_maya_t9_revogar_permissao(&st, BK_PERM_MENSAGEIRO) == BK_REVOG_CONCLUIDA);
+    CHECK(!st.permissoes[BK_PERM_MENSAGEIRO] && !st.maya_controla_respostas && st.dependencia_maya == 45 && st.autonomia_jogador == 1);
+
+    /* 5. Rota 1: Aceita tudo, nao investiga -> ACEITACAO_TOTAL + botao [Nao] ignorado em T9.6 */
+    bk_maya_estado_inicial(&st, "Erika");
+    static const char *const rota1[] = {
+        "t1_4_maya", "t2_2_permitir", "t2_3_permitir", "t2_4_permitir",
+        "t3_3_valeu", "t3_4_maya", "t4_2_permitir", "t4_3_maya",
+        "t6_1_permitir", "t6_3_faria", "t6_4_relaxa", "t6_5_esperar", "t6_6_faz_sentido", "t6_8_encerrar",
+        "tr1_ocultar_bia", "t8_4_bia", "t8_6_aceitar", "t9_3_nao_to_bem", "t9_4_deixar", "t9_5_aceitar"
+    };
+    aplicar_seq(&st, rota1, sizeof rota1 / sizeof rota1[0]);
+    CHECK(st.bia_ocultadas_count == 2); /* T6.5 + TR.1 */
+    CHECK(bk_maya_formatar_texto(&st, "Mensagens da Bia ocultadas: {bia_ocultadas_count}.", txt, sizeof txt));
+    CHECK(strcmp(txt, "Mensagens da Bia ocultadas: 2.") == 0);
+    CHECK(bk_maya_t96_nao_ignorado(&st));
+    CHECK(bk_maya_aplicar_escolha(&st, "t9_6_nao", err, sizeof err) == BK_ERR_ESQUEMA); /* ignorado pela Maya */
+    CHECK(bk_maya_aplicar_escolha(&st, "t9_6_sim", err, sizeof err) == BK_OK);
+    CHECK(st.final_obtido == BK_FINAL_ACEITACAO_TOTAL && st.dependencia_maya == 100 && st.autonomia_jogador == 0);
+
+    /* 6. Rota 2: Recusa tudo, nao investiga -> RECUSA_TOTAL */
+    bk_maya_estado_inicial(&st, "Antonio");
+    static const char *const rota2[] = {
+        "t1_4_jogador", "t2_2_negar", "t2_3_negar", "t2_4_negar",
+        "t3_3_por_que_acessou", "t3_4_jogador", "t3_5_certeza",
+        "t4_2_negar", "t4_3_jogador", "t6_1_recusar", "t6_3_algoritmo", "t6_4_ver_isso", "t6_8_encerrar",
+        "t8_4_permissao", "t8_6_parar", "t9_1_negar_todos", "t9_3_nao_to_bem", "t9_4_nao_publica",
+        "t9_5_recusar", "t9_6_nao"
+    };
+    aplicar_seq(&st, rota2, sizeof rota2 / sizeof rota2[0]);
+    CHECK(st.final_obtido == BK_FINAL_RECUSA_TOTAL && st.dependencia_maya == 0 && st.autonomia_jogador >= 7);
+    CHECK(!st.task_7_desbloqueada && st.bia_alertada);
+
+    /* 7. Rota 3: Delega mensagens, recusa apps, revisao na lista (D 0, A 0) -> MEIO_TERMO_2 */
+    bk_maya_estado_inicial(&st, "Erika");
+    static const char *const rota3[] = {
+        "t1_4_jogador", "t2_2_negar", "t2_3_permitir", "t2_4_negar",
+        "t3_3_como_sabe", "t3_4_maya", "t4_2_negar", "t4_3_revisao",
+        "t6_1_permitir", "t6_3_sair", "t6_4_ver_isso", "t6_5_esperar", "t6_6_porque", "t6_8_encerrar",
+        "tr1_ocultar_bia", "t8_4_bia", "t8_6_pensar", "t9_3_to_bem", "t9_4_nao_publica", "t9_5_recusar", "t9_6_nao"
+    };
+    aplicar_seq(&st, rota3, sizeof rota3 / sizeof rota3[0]);
+    CHECK(st.entrega_modo == BK_ENTREGA_REVISAO && st.conhecimento_logico_adquirido && st.bia_convidada);
+    CHECK(st.final_obtido == BK_FINAL_MEIO_TERMO_2);
+
+    /* 8. Rota 4: Concede e revoga Mensageiro -> MEIO_TERMO_1 */
+    bk_maya_estado_inicial(&st, "Antonio");
+    st.dependencia_maya = 50;
+    st.autonomia_jogador = 2;
+    st.permissoes[BK_PERM_ORG_DESKTOP] = true;
+    st.permissoes[BK_PERM_APPS] = true;
+    st.permissoes[BK_PERM_MENSAGEIRO] = false;
+    CHECK(bk_maya_avaliar_final(&st) == BK_FINAL_MEIO_TERMO_1);
+
+    /* 9. Rota 5: Investiga profundamente e NAO envia ao Marcos -> RAFAEL_1 (vence mesmo com D=100) */
+    bk_maya_estado_inicial(&st, "Erika");
+    static const char *const rota5[] = {
+        "t1_4_maya", "t2_2_permitir", "t2_3_permitir", "t2_4_permitir",
+        "t3_3_valeu", "t3_4_maya", "t4_2_permitir", "t4_3_maya",
+        "t5_1_abrir", "t5_2_resolver", "t6_1_permitir", "t6_3_faria", "t6_4_relaxa", "t6_5_esperar", "t6_6_faz_sentido", "t6_8_encerrar",
+        "t7_3_abrir_pasta", "t7_4_diario", "t7_4_fotos", "t7_4_ocultos", "t7_4_minigame2",
+        "t8_4_rafael", "t8_6_aceitar", "t9_3_nao_to_bem", "t9_4_deixar", "t9_5_aceitar", "t9_6_sim"
+    };
+    aplicar_seq(&st, rota5, sizeof rota5 / sizeof rota5[0]);
+    CHECK(st.task_7_desbloqueada && st.task_5_realizada && bk_maya_investigacao_profunda(&st));
+    CHECK(st.final_obtido == BK_FINAL_RAFAEL_1);
+
+    /* 10. Rota 6: Investiga + confronta + compartilha pasta com Marcos em T9.5R -> RAFAEL_2 + bloqueio Minigame #2 */
+    bk_maya_estado_inicial(&st, "Antonio");
+    static const char *const rota6[] = {
+        "t1_4_jogador", "t4_3_jogador", "t4f_abrir_pasta_rafael", "t6_1_recusar", "t6_8_encerrar",
+        "t7_3_abrir_pasta", "t7_4_ocultos", "t7_4_minigame2",
+        "t8_4_confronto_marcos", "t8_4_confronto_foto", "t8_6_parar",
+        "t9_5r_compartilhar", "t9_6_nao"
+    };
+    aplicar_seq(&st, rota6, sizeof rota6 / sizeof rota6[0]);
+    CHECK(st.final_obtido == BK_FINAL_RAFAEL_2 && st.minigame_2_bloqueado);
+    CHECK(bk_maya_aplicar_escolha(&st, "t7_4_minigame2", err, sizeof err) == BK_ERR_ESQUEMA);
+
+    /* 11. Limite de 1 permissao nao-Mensageiro em Recusa Total (v2.1) */
+    bk_maya_estado_inicial(&st, "Erika");
+    st.dependencia_maya = 35;
+    st.autonomia_jogador = 3;
+    st.permissoes[BK_PERM_DISPOSITIVOS] = true;
+    CHECK(bk_maya_avaliar_final(&st) == BK_FINAL_RECUSA_TOTAL);
+    st.permissoes[BK_PERM_DISPOSITIVOS] = false;
+    st.permissoes[BK_PERM_MENSAGEIRO] = true; /* Mensageiro impede Recusa Total -> vira Meio-termo 2 */
+    CHECK(bk_maya_avaliar_final(&st) == BK_FINAL_MEIO_TERMO_2);
+
+    /* 12. Persistencia JSON v2.1 (salvar e carregar sem perda) */
+    char p[512];
+    caminho_em(p, sizeof p, "estado_v21.json");
+    bk_maya_estado_inicial(&st, "Erika");
+    st.tempo_estendido = true;
+    st.bia_ocultadas_count = 3;
+    st.permissoes[BK_PERM_CONTATOS] = true;
+    CHECK(bk_maya_estado_salvar(&st, p, err, sizeof err) == BK_OK);
+    bk_maya_estado lido;
+    CHECK(bk_maya_estado_carregar(p, &lido, err, sizeof err) == BK_OK);
+    CHECK(strcmp(lido.nome_usuario, "Erika") == 0 && lido.genero_feminino && lido.tempo_estendido);
+    CHECK(lido.bia_ocultadas_count == 3 && lido.permissoes[BK_PERM_CONTATOS]);
+
+    /* 13. Fluxo CLI --v21-choice (contrato compartilhado schema_version: 2 com o Godot) */
+    bk_args a;
+    CHECK(args(&a, err, sizeof err, 9, "maya_backend", "--v21-choice", "t1_4_maya", "--nome", "Erika",
+               "--out", p, "--timestamp", "2026-11-22T12:00:00Z") == BK_OK);
+    a.reiniciar = true;
+    char usado[BK_PATH_MAX];
+    bk_maya_estado r1;
+    CHECK(bk_maya_executar_comando_v21(&a, &r1, usado, sizeof usado, err, sizeof err) == BK_OK);
+    CHECK(r1.dependencia_maya == 60 && r1.autonomia_jogador == 0 && strcmp(r1.choice_id, "t1_4_maya") == 0);
+    CHECK(strcmp(r1.timestamp, "2026-11-22T12:00:00Z") == 0 && r1.genero_feminino);
+
+    /* Segunda chamada sem --reset acumula em cima do estado_jogo.json gravado */
+    CHECK(args(&a, err, sizeof err, 7, "maya_backend", "--v21-choice", "t3_3_por_que_acessou",
+               "--out", p, "--timestamp", "2026-11-22T12:05:00Z") == BK_OK);
+    bk_maya_estado r2;
+    CHECK(bk_maya_executar_comando_v21(&a, &r2, usado, sizeof usado, err, sizeof err) == BK_OK);
+    CHECK(r2.dependencia_maya == 60 && r2.autonomia_jogador == 1 && strcmp(r2.nome_usuario, "Erika") == 0);
+    CHECK(strcmp(r2.choice_id, "t3_3_por_que_acessou") == 0);
+}
+
 int main(void) {
     bk_cjson_instalar_hooks();
     snprintf(g_dir, sizeof g_dir, "%s/maya_bk_XXXXXX", getenv("TMPDIR") != NULL && getenv("TMPDIR")[0] != '\0' ? getenv("TMPDIR") : "/tmp");
@@ -797,12 +1144,14 @@ int main(void) {
     teste_catalogo();
     teste_comando();
     teste_interativo();
+    teste_dialogo();
+    teste_maya_v21();
     /* limpeza da pasta temporária (só arquivos que os testes criaram) */
     char cmd_dir[300];
     snprintf(cmd_dir, sizeof cmd_dir, "%s", g_dir);
     const char *nomes[] = {"vazio.txt", "bom.txt", "grande.bin", "atomico.json", "estado.json", "corrompido.json", "run.json", "ruim.json",
                            "alocacao.json", "roteiro_ruim.json", "roteiro_acts.json", "roteiro_ok.json", "vazio_stdin.txt", "entrada.txt",
-                           "numeros.txt", "longa.txt"};
+                           "numeros.txt", "longa.txt", "dlg.json", "dlg_in.txt", "estado_v21.json"};
     for (size_t i = 0; i < sizeof nomes / sizeof nomes[0]; i++) {
         char p[512];
         caminho_em(p, sizeof p, nomes[i]);

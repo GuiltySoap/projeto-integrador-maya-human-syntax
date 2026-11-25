@@ -9,8 +9,7 @@ argumentos, nunca por um shell):
      id desconhecido e os códigos de saída de cada caso (backend/bk_common.h);
   2. estado_jogo.json: esquema versionado, UTF-8, escrita atômica (sem .tmp sobrando, arquivo anterior intacto quando a gravação falha),
      acúmulo entre execuções, --reset, limites 0..100 e recuperação de um arquivo corrompido;
-  3. catálogo (backend/choices.json) x core/data/narrativa/conversas.json: os deltas de AUT/CON/DEP e o campo is_placeholder de cada escolha
-     têm de bater nos dois lados (o jogo aplica o que está em conversas.json; o backend, o que está em choices.json);
+  3. catálogo legado (backend/choices.json) e ids canônicos: cada `id_backend` do roteiro v2 precisa existir na matriz do backend (bk_maya_v21.c);
   4. o código C não chama o shell nem usa funções sem limite, e os scripts do Godot não executam processos.
 
 Modo `--integracao <pasta>`: confere o resultado do ciclo C -> Godot -> C (veja `make integracao` e tests/integracao_c/): o backend grava, o
@@ -272,38 +271,37 @@ def testar_estado(b, tmp):
     ok(codigo in (ERR_LIMITE, ERR_ESQUEMA) and not (tmp / "z.json").exists(), "catálogo com mais de 128 escolhas é recusado (saída %d)" % codigo)
 
 
-# ------------------------------------------------------------------ 3. catálogo x conversas.json
-def escolhas_do_jogo():
-    dados = json.loads(CONVERSAS.read_text(encoding="utf-8"))
-    achadas = {}
-    for id_msg, msg in dados["mensagens"].items():
-        for esc in msg.get("escolhas") or []:
-            metricas = esc.get("metricas") or {}
-            registro = {"metricas": tuple(float(metricas.get(n, 0)) for n in METRICAS), "placeholder": bool(msg.get("is_placeholder", False) or esc.get("is_placeholder", False)), "mensagem": id_msg}
-            achadas.setdefault(esc["id"], []).append(registro)
-    return achadas
+# ------------------------------------------------------------------ 3. catálogo legado e ids do roteiro v2.1
+ROTEIRO = RAIZ / "core" / "data" / "narrativa" / "roteiro_v2.json"
+FONTE_V21 = RAIZ / "backend" / "bk_maya_v21.c"
+
+
+def ids_do_roteiro():
+    """Pares (nó, opção, id_backend) do roteiro v2: o campo `id_backend` liga a opção ao id canônico da matriz do backend em C."""
+    dados = json.loads(ROTEIRO.read_text(encoding="utf-8"))
+    achados = []
+    for id_no, no in dados["nos"].items():
+        for o in no.get("opcoes") or []:
+            if "id_backend" in o:
+                achados.append((id_no, o["id"], o["id_backend"]))
+    return achados
 
 
 def testar_catalogo():
-    secao("catálogo do backend x escolhas do jogo (conversas.json)")
+    secao("catálogo legado (choices.json) e ids canônicos do roteiro v2.1")
     catalogo = json.loads(CATALOGO.read_text(encoding="utf-8"))
     ok(catalogo.get("schema_version") == 1 and isinstance(catalogo.get("choices"), list), "choices.json tem schema_version 1 e a lista 'choices'")
     do_backend = {c["id"]: c for c in catalogo["choices"]}
     ok(len(do_backend) == len(catalogo["choices"]), "ids do catálogo sem repetição")
     ok(all(RE_ID.match(i) for i in do_backend), "todo id do catálogo cumpre o formato aceito pelo --choice")
-    do_jogo = escolhas_do_jogo()
-    for id_escolha, usos in sorted(do_jogo.items()):
-        primeiro = usos[0]
-        ok(all(u["metricas"] == primeiro["metricas"] and u["placeholder"] == primeiro["placeholder"] for u in usos),
-           "a escolha '%s' tem os mesmos deltas em todas as mensagens em que aparece" % id_escolha)
-        if not ok(id_escolha in do_backend, "a escolha '%s' do jogo existe no catálogo do backend" % id_escolha):
-            continue
-        c = do_backend[id_escolha]
-        deltas = (float(c.get("autonomia", 0)), float(c.get("conformidade", 0)), float(c.get("dependencia", 0)))
-        ok(deltas == primeiro["metricas"], "deltas de '%s': backend %s x jogo %s" % (id_escolha, deltas, primeiro["metricas"]))
-        ok(bool(c.get("is_placeholder", False)) == primeiro["placeholder"], "is_placeholder de '%s' bate com a mensagem do jogo" % id_escolha)
-    ok(not [i for i in do_backend if i not in do_jogo], "nenhuma escolha do backend sem correspondente no jogo (%s)" % [i for i in do_backend if i not in do_jogo])
     ok(all(c.get("status", "ok") and RE_STATUS.match(c.get("status", "ok")) for c in catalogo["choices"]), "status de cada escolha cumpre [a-z_]{1,32}")
+    conhecidos = set(re.findall(r'strcmp\(id, "([a-z0-9_]+)"\)', FONTE_V21.read_text(encoding="utf-8")))
+    ligados = ids_do_roteiro()
+    ok(len(ligados) > 0, "o roteiro v2 liga opções a ids do backend (%d opções com id_backend)" % len(ligados))
+    for id_no, id_opcao, id_backend in ligados:
+        ok(RE_ID.match(id_backend) is not None and id_backend in conhecidos, "%s/%s -> '%s' existe na matriz do backend (bk_maya_v21.c)" % (id_no, id_opcao, id_backend))
+    sem_uso = sorted(i for i in conhecidos if i.startswith("t") and i not in {x[2] for x in ligados})
+    print("  (ids da matriz do backend sem opção correspondente no roteiro: %d, ex.: %s)" % (len(sem_uso), ", ".join(sem_uso[:6])))
 
 
 # ------------------------------------------------------------------ 4. código-fonte

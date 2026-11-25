@@ -42,6 +42,11 @@ var _rect_origem: Rect2 = Rect2()
 var _mouse_origem: Vector2 = Vector2.ZERO
 var _tween_tremor: Tween
 var _tween_titulo: Tween
+## Painel ancorado (catálogo: "painel_ancorado": true): abre no canto inferior direito, logo acima da barra de tarefas, subindo da barra, e fecha descendo.
+var painel_ancorado: bool = false
+var _estado_painel: EstadoPainel = EstadoPainel.new()
+var _tween_painel: Tween = null
+var _movida_pelo_jogador: bool = false
 
 @onready var _fundo: Panel = %Fundo
 @onready var _barra: Panel = %Barra
@@ -88,7 +93,12 @@ func configurar(dados_app: Dictionary, no_conteudo: Control, tamanho_inicial: Ve
 	pivot_offset = size / 2.0
 	_montar_conteudo(no_conteudo)
 	_icone_app.configurar(info, 22)
-	_animar_abertura()
+	painel_ancorado = bool(dados_app.get("painel_ancorado", false))
+	if painel_ancorado:
+		_ancorar_ao_canto()
+		_animar_abertura_painel()
+	else:
+		_animar_abertura()
 
 
 func definir_titulo(novo: String) -> void:
@@ -134,6 +144,9 @@ func reajustar() -> void:
 		size = area
 		return
 	size = Vector2(minf(size.x, maxf(area.x, tamanho_min.x)), minf(size.y, maxf(area.y, tamanho_min.y)))
+	if painel_ancorado and not _movida_pelo_jogador and _estado_painel.aberto():
+		position = posicao_ancorada()
+		return
 	position = limitar_posicao(position)
 
 
@@ -145,6 +158,64 @@ func limitar_posicao(pos: Vector2) -> Vector2:
 	var x := clampf(pos.x, -size.x + MARGEM_VISIVEL, maxf(area.x - MARGEM_VISIVEL, 0.0))
 	var y := clampf(pos.y, 0.0, maxf(area.y - _altura_barra(), 0.0))
 	return Vector2(x, y)
+
+
+## Posição do canto inferior direito da área de janelas (margem de 12 px à direita e 8 px acima da barra), sempre dentro da tela.
+func posicao_ancorada() -> Vector2:
+	var area := get_parent_area_size()
+	if area.x <= 0.0 or area.y <= 0.0:
+		return position
+	return Vector2(maxf(area.x - size.x - 12.0, 0.0), maxf(area.y - size.y - 8.0, 0.0))
+
+
+func estado_do_painel() -> EstadoPainel:
+	return _estado_painel
+
+
+func _ancorar_ao_canto() -> void:
+	position = posicao_ancorada()
+
+
+func _animar_abertura_painel() -> void:
+	if not _estado_painel.pedir_abrir():
+		return
+	if not GerenciadorConfiguracoes.animacoes_permitidas():
+		_estado_painel.concluir_abertura()
+		return
+	var destino := position
+	position = destino + Vector2(0.0, 36.0)
+	modulate.a = 0.0
+	if _tween_painel != null and _tween_painel.is_valid():
+		_tween_painel.kill()
+	_tween_painel = create_tween().set_parallel(true)
+	_tween_painel.tween_property(self, "position", destino, 0.20).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tween_painel.tween_property(self, "modulate:a", 1.0, 0.16)
+	_tween_painel.chain().tween_callback(_estado_painel.concluir_abertura)
+
+
+## Chamado pelo GerenciadorJanelas antes de destruir o painel. false = recusado (já está abrindo/fechando): ignora o clique duplo.
+func iniciar_fechamento_painel() -> bool:
+	if not painel_ancorado:
+		return true
+	if not _estado_painel.pedir_fechar():
+		return false
+	return true
+
+
+## Desce e some (coroutine). Sem animações permitidas, termina na hora.
+func animar_fechamento_painel() -> void:
+	if not painel_ancorado:
+		return
+	if not GerenciadorConfiguracoes.animacoes_permitidas() or not is_inside_tree():
+		_estado_painel.concluir_fechamento()
+		return
+	if _tween_painel != null and _tween_painel.is_valid():
+		_tween_painel.kill()
+	_tween_painel = create_tween().set_parallel(true)
+	_tween_painel.tween_property(self, "position", position + Vector2(0.0, 36.0), 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	_tween_painel.tween_property(self, "modulate:a", 0.0, 0.14)
+	await _tween_painel.finished
+	_estado_painel.concluir_fechamento()
 
 
 func tremer() -> void:
@@ -276,6 +347,7 @@ func _ao_barra_input(evento: InputEvent) -> void:
 		var pai := get_parent() as Control
 		var origem_pai := pai.global_position if pai != null else Vector2.ZERO
 		position = limitar_posicao(alvo - origem_pai)
+		_movida_pelo_jogador = true
 		movida.emit(self)
 
 

@@ -15,6 +15,12 @@ extends RefCounted
 ##   - status: 1 a 32 caracteres [a-z_].   - metrics: números finitos de 0 a 100 (as mesmas métricas AUT/CON/DEP do jogo).
 ##   - timestamp: UTC, "YYYY-MM-DDTHH:MM:SSZ".   - is_placeholder: a escolha ainda usa texto/narrativa provisórios.
 ##
+## FORMATO v2 (Roteiro v2.1, `schema_version` 2): o estado da campanha como o backend o enxerga: D (`dependencia_maya`), A (`autonomia_jogador`), as
+## cinco permissões, `task_atual` numérico (1..9; 10 = AV), `final` (NENHUM ou um dos seis ids do C), `genero`, `rafael_investigacao_profunda` e as
+## `flags` (booleanas, números e enumerações numéricas como `entrega_modo`). `criar_v21` lê tudo dos serviços do jogo (a investigação profunda e o final
+## NÃO são recalculados aqui). Cada opção do roteiro com `id_backend` liga a escolha ao id canônico da matriz do C (`registrar_escolha_v21`). O formato
+## v1 continua aceito na leitura (arquivos antigos).
+##
 ## ONDE: `user://nexus_os/estado_jogo.json`, junto do salvamento e SEPARADO dele e das configurações (outro arquivo, outro esquema). Nunca em
 ## res:// (somente leitura numa build distribuída): gravar em res:// é recusado sempre. Caminhos absolutos fora de user:// só com
 ## `permitir_absoluto` (testes e ferramentas de desenvolvimento).
@@ -29,6 +35,8 @@ extends RefCounted
 ## nunca sobrescreve o progresso do jogador sozinho, e as métricas só mudam pelo GerenciadorEstado (a regra central, com os limites).
 
 const VERSAO_ESQUEMA := 1
+const VERSAO_ESQUEMA_V21 := 2
+const ROTEIRO_VERSAO_V21 := "2.1"
 const NOME_ARQUIVO := "estado_jogo.json"
 const CAMINHO := "user://nexus_os/estado_jogo.json"
 const TAMANHO_MAX_BYTES := 1048576
@@ -149,8 +157,10 @@ static func validar(dados: Variant) -> Dictionary:
 		return {"ok": false, "erros": ["a raiz do JSON deve ser um objeto"], "estado": {}}
 	var d: Dictionary = dados
 	var versao: Variant = d.get("schema_version")
+	if (typeof(versao) == TYPE_INT or typeof(versao) == TYPE_FLOAT) and float(versao) == float(VERSAO_ESQUEMA_V21):
+		return _validar_v21(d)
 	if (typeof(versao) != TYPE_INT and typeof(versao) != TYPE_FLOAT) or float(versao) != float(VERSAO_ESQUEMA):
-		erros.append("schema_version ausente ou diferente de %d" % VERSAO_ESQUEMA)
+		erros.append("schema_version ausente ou diferente de %d/%d" % [VERSAO_ESQUEMA, VERSAO_ESQUEMA_V21])
 	var escolha: Variant = d.get("choice_id")
 	if typeof(escolha) != TYPE_STRING:
 		erros.append("choice_id ausente ou não textual")
@@ -188,8 +198,66 @@ static func validar(dados: Variant) -> Dictionary:
 	return {"ok": true, "erros": [], "estado": estado}
 
 
+static func _validar_v21(d: Dictionary) -> Dictionary:
+	var erros: Array = []
+	var escolha: Variant = d.get("choice_id", "")
+	if typeof(escolha) != TYPE_STRING:
+		erros.append("choice_id não textual")
+	elif String(escolha) != "" and not id_valido(escolha):
+		erros.append("choice_id inválido")
+	var situacao: Variant = d.get("status", STATUS_OK)
+	if not status_valido(situacao):
+		erros.append("status inválido")
+	var carimbo: Variant = d.get("timestamp", "")
+	if typeof(carimbo) != TYPE_STRING:
+		erros.append("timestamp não textual")
+	elif String(carimbo) != "" and not timestamp_valido(carimbo):
+		erros.append("timestamp inválido")
+	var dep: Variant = d.get("dependencia_maya")
+	if not _numero_de_metrica(dep):
+		erros.append("dependencia_maya ausente ou fora de 0..100")
+	var aut: Variant = d.get("autonomia_jogador")
+	if (typeof(aut) != TYPE_INT and typeof(aut) != TYPE_FLOAT) or float(aut) < 0.0 or is_nan(float(aut)) or is_inf(float(aut)):
+		erros.append("autonomia_jogador ausente ou negativo")
+	var perms_raw: Variant = d.get("permissoes")
+	if not (perms_raw is Dictionary):
+		erros.append("permissoes ausente ou não é um objeto")
+	if not erros.is_empty():
+		return {"ok": false, "erros": erros, "estado": {}}
+	var perms_in: Dictionary = perms_raw
+	var perms_out: Dictionary = {}
+	var ativas: int = 0
+	for p in GerenciadorEstado.PERMISSOES_V2:
+		var v: bool = bool(perms_in.get(p, false))
+		perms_out[p] = v
+		if v:
+			ativas += 1
+	var flags_in: Dictionary = d.get("flags", {}) if d.get("flags") is Dictionary else {}
+	var estado: Dictionary = {
+		"schema_version": VERSAO_ESQUEMA_V21,
+		"roteiro_versao": str(d.get("roteiro_versao", ROTEIRO_VERSAO_V21)),
+		"choice_id": String(escolha),
+		"status": String(situacao),
+		"timestamp": String(carimbo),
+		"nome_usuario": str(d.get("nome_usuario", "Usuario")),
+		"genero": "feminino" if str(d.get("genero", "masculino")) == "feminino" else "masculino",
+		"tempo_estendido": bool(d.get("tempo_estendido", false)),
+		"dependencia_maya": int(clampi(int(dep), 0, 100)),
+		"autonomia_jogador": maxi(0, int(aut)),
+		"task_atual": maxi(1, int(d.get("task_atual", 1))),
+		"permissoes_ativas": ativas,
+		"rafael_investigacao_profunda": bool(d.get("rafael_investigacao_profunda", false)),
+		"final": str(d.get("final", "NENHUM")),
+		"permissoes": perms_out,
+		"flags": flags_in.duplicate(true),
+	}
+	return {"ok": true, "erros": [], "estado": estado}
+
+
 ## O texto do arquivo: JSON com tabulações, UTF-8 (a Godot grava texto em UTF-8), quebra de linha final e números inteiros sem ".0".
 static func serializar(estado: Dictionary) -> String:
+	if int(estado.get("schema_version", VERSAO_ESQUEMA)) == VERSAO_ESQUEMA_V21:
+		return JSON.stringify(estado, "\t", false) + "\n"
 	var m: Dictionary = estado.get("metrics", {})
 	var metricas: Dictionary = {}
 	for nome in METRICAS:
@@ -336,18 +404,142 @@ static func registrar_escolha(id_escolha: String, is_placeholder: bool, caminho:
 	return r
 
 
+# ------------------------------------------------------------------ contrato v2.1 (schema_version: 2)
+## Flags que o backend em C conhece (backend/bk_maya_v21.c). Booleanas: o mesmo nome nos dois lados. Enumeradas: o jogo guarda TEXTO e o C guarda
+## NÚMERO, por isso a tradução abaixo (nos dois sentidos). Qualquer outra flag do jogo (contadores, `arquivo_aberto:*`, `chat_extra:*`...) não vai ao arquivo.
+const FLAGS_BOOL_V21: PackedStringArray = [
+	"maya_interferiu_mensagem", "maya_controla_respostas", "bia_censurada", "pediu_limite", "pista_anotacao_lida", "rotina_por_maya",
+	"conhecimento_logico_adquirido", "sincronizacao_concluida", "rafael_investigado", "task_5_realizada", "pasta_rafael_aberta", "rafael_diario_lido",
+	"rafael_fotos_vistas", "segredo_rafael_encontrado", "minigame_rafael_resolvido", "task_7_desbloqueada", "rafael_confronto",
+	"rafael_evidencia_enviada", "bia_alertada", "bia_convidada",
+]
+const FLAGS_ENUM_V21: Dictionary = {
+	"t1_organizacao": ["", "maya", "jogador"],
+	"t3_resposta": ["", "como_sabe", "por_que_acessou", "valeu"],
+	"entrega_modo": ["", "maya", "jogador", "revisao"],
+	"t8_postura": ["", "parar", "aceitar", "pensar"],
+	"mural_publicacao": ["nenhuma", "maya", "apagada"],
+}
+## Ids de final do jogo -> ids do backend (bk_maya_final_id). O jogo guarda `final_id` no GerenciadorEstado.
+const FINAIS_V21: Dictionary = {
+	"": "NENHUM", "rafael_2": "RAFAEL_2", "rafael_1": "RAFAEL_1", "aceitacao_total": "ACEITACAO_TOTAL", "recusa_total": "RECUSA_TOTAL",
+	"meio_termo_1": "MEIO_TERMO_1", "meio_termo_2": "MEIO_TERMO_2",
+}
+
+
+## Task atual como número (1..9; 10 = AV), o formato do backend. "tr_1" conta como 6 (a transição ainda é a conversa com a Bia).
+static func task_numerica() -> int:
+	var t: String = GerenciadorEstado.task_atual
+	if t == "av":
+		return 10
+	if t == "tr_1":
+		return 6
+	if t.begins_with("task_"):
+		return clampi(int(t.substr(5)), 1, 9)
+	return 1
+
+
+## As flags do jogo que o backend entende, já no formato dele (booleanas, números e enumerações numéricas).
+static func flags_para_v21() -> Dictionary:
+	var saida: Dictionary = {}
+	for nome in FLAGS_BOOL_V21:
+		saida[nome] = GerenciadorEstado.tem_flag(nome)
+	for nome in FLAGS_ENUM_V21:
+		var valores: Array = FLAGS_ENUM_V21[nome]
+		var indice: int = valores.find(str(GerenciadorEstado.valor_flag(nome, "")))
+		saida[nome] = maxi(0, indice)
+	saida["bia_ocultadas_count"] = AppRelatorio.contar_ocultas()
+	saida["minigame_2_bloqueado"] = GerenciadorEstado.tem_flag("rafael_fechada_pela_maya") or GerenciadorEstado.no_roteiro in ["T9.6", "AV"]
+	return saida
+
+
+## Estado atual do jogo no contrato v2.1, compatível com `maya_backend --v21-choice`. Tudo vem das fontes únicas do jogo (GerenciadorEstado,
+## Permissoes): a investigação profunda e o final NÃO são recalculados aqui.
+static func criar_v21(choice_id: String, status: String = STATUS_OK, carimbo: String = "") -> Dictionary:
+	var perms: Dictionary = {}
+	for p in GerenciadorEstado.PERMISSOES_V2:
+		perms[p] = Permissoes.valor(str(p))
+	var genero: String = "feminino" if GerenciadorEstado.pronome_jogador == "ela" else "masculino"
+	return {
+		"schema_version": VERSAO_ESQUEMA_V21,
+		"roteiro_versao": ROTEIRO_VERSAO_V21,
+		"choice_id": choice_id,
+		"status": status,
+		"timestamp": carimbo if carimbo != "" else timestamp_agora(),
+		"nome_usuario": GerenciadorEstado.nome_jogador,
+		"genero": genero,
+		"tempo_estendido": bool(GerenciadorConfiguracoes.obter("tempo_estendido")),
+		"dependencia_maya": GerenciadorEstado.dependencia_maya(),
+		"autonomia_jogador": GerenciadorEstado.autonomia_jogador(),
+		"task_atual": task_numerica(),
+		"permissoes_ativas": GerenciadorEstado.permissoes_ativas(),
+		"rafael_investigacao_profunda": GerenciadorEstado.investigacao_profunda_concluida(),
+		"final": str(FINAIS_V21.get(GerenciadorEstado.final_id, "NENHUM")),
+		"permissoes": perms,
+		"flags": flags_para_v21(),
+	}
+
+
+## Grava o estado v2.1 em `estado_jogo.json` quando a ponte opcional `usar_backend_json` estiver ligada. `id_backend` é o id canônico da matriz do
+## backend (campo `id_backend` da opção no roteiro). Opção sem id canônico não é gravada ({motivo: "sem_id_backend"}).
+static func registrar_escolha_v21(id_backend: String, caminho: String = "") -> Dictionary:
+	if not ativo():
+		return {"ok": false, "erro": "", "motivo": "ponte_desligada"}
+	if id_backend == "":
+		return {"ok": false, "erro": "", "motivo": "sem_id_backend"}
+	if not id_valido(id_backend):
+		return {"ok": false, "erro": "id de escolha fora do formato: %s" % id_backend, "motivo": "id_invalido"}
+	var r: Dictionary = gravar(criar_v21(id_backend), caminho)
+	if not bool(r["ok"]):
+		push_warning("EstadoJogoBackend: %s" % str(r["erro"]))
+	r["motivo"] = "gravado" if bool(r["ok"]) else "falha_ao_gravar"
+	return r
+
+
 ## Aplica as métricas de um estado VÁLIDO às métricas do jogo, pela regra central (GerenciadorEstado.definir_metrica: limites e validação).
+## Suporta schema_version 1 (métricas legadas) e schema_version 2 (Roteiro v2.1: D, A, 5 permissões e flags).
+## No v2.1: as permissões passam por `Permissoes.definir` e as flags por `definir_flag_roteiro` (flags de descoberta nunca voltam a false);
+## a Autonomia nunca diminui (valor menor que o atual é ignorado); `task_atual` e `final` NÃO são aplicados (o progresso é do jogo).
 ## É uma ação explícita: nada chama isto sozinho. Devolve {ok, erro, aplicadas: {nome: valor}}.
 static func aplicar_ao_jogo(estado: Dictionary) -> Dictionary:
 	var r: Dictionary = validar(estado)
 	if not bool(r["ok"]):
 		return {"ok": false, "erro": "estado inválido: " + "; ".join(PackedStringArray(r["erros"])), "aplicadas": {}}
+	var validado: Dictionary = r["estado"]
 	var aplicadas: Dictionary = {}
-	var metricas: Dictionary = (r["estado"] as Dictionary)["metrics"]
+	if int(validado.get("schema_version", VERSAO_ESQUEMA)) == VERSAO_ESQUEMA_V21:
+		if GerenciadorEstado.definir_metrica(Metricas.DEPENDENCIA, float(validado["dependencia_maya"]), "backend_c"):
+			aplicadas[Metricas.DEPENDENCIA] = GerenciadorEstado.obter_metrica(Metricas.DEPENDENCIA)
+		var nova_autonomia: float = maxf(float(validado["autonomia_jogador"]), float(GerenciadorEstado.autonomia_jogador()))
+		if GerenciadorEstado.definir_metrica(Metricas.AUTONOMIA, nova_autonomia, "backend_c"):
+			aplicadas[Metricas.AUTONOMIA] = GerenciadorEstado.obter_metrica(Metricas.AUTONOMIA)
+		var perms: Dictionary = validado.get("permissoes", {})
+		for p in GerenciadorEstado.PERMISSOES_V2:
+			if perms.has(p):
+				Permissoes.definir(str(p), bool(perms[p]))
+		_aplicar_flags_v21(validado.get("flags", {}))
+		return {"ok": aplicadas.size() == 2, "erro": "", "aplicadas": aplicadas}
+	var metricas: Dictionary = validado["metrics"]
 	for nome in METRICAS:
 		if GerenciadorEstado.definir_metrica(nome, metricas[nome], "backend_c"):
 			aplicadas[nome] = GerenciadorEstado.obter_metrica(nome)
 	return {"ok": aplicadas.size() == METRICAS.size(), "erro": "", "aplicadas": aplicadas}
+
+
+## Flags do arquivo v2.1 para o jogo: só as conhecidas, com a tradução das enumerações de número para texto.
+static func _aplicar_flags_v21(flags_arquivo: Variant) -> void:
+	if not (flags_arquivo is Dictionary):
+		return
+	var f: Dictionary = flags_arquivo
+	for nome in FLAGS_BOOL_V21:
+		if f.has(nome) and typeof(f[nome]) == TYPE_BOOL:
+			GerenciadorEstado.definir_flag_roteiro(str(nome), bool(f[nome]))
+	for nome in FLAGS_ENUM_V21:
+		if f.has(nome) and (typeof(f[nome]) == TYPE_INT or typeof(f[nome]) == TYPE_FLOAT):
+			var valores: Array = FLAGS_ENUM_V21[nome]
+			var indice: int = int(f[nome])
+			if indice > 0 and indice < valores.size():
+				GerenciadorEstado.definir_flag_roteiro(str(nome), valores[indice])
 
 
 ## Lê o arquivo, valida e aplica às métricas do jogo. Devolve {ok, erro, origem, estado, aplicadas}. Ação explícita (ver o cabeçalho).

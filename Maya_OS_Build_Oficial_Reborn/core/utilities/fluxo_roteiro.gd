@@ -111,6 +111,10 @@ static func conversas_sincronizadas() -> Array:
 	return (_relatorios.get("conversas", []) as Array).duplicate(true) if _relatorios.get("conversas") is Array else []
 
 
+## Destino especial dos nós da Task 5 (v2.1): volta ao ponto de onde o histórico antigo foi aberto (T4.F ou a conversa da Task 6). O motor resolve.
+const DESTINO_RETORNO_T5 := "@retorno_t5"
+
+
 ## Todos os problemas dos dados: tipo desconhecido, destino inexistente, opção sem destino. Vazio = consistente.
 static func validar() -> PackedStringArray:
 	var p := PackedStringArray()
@@ -125,7 +129,7 @@ static func validar() -> PackedStringArray:
 			p.append("%s: tipo desconhecido '%s'" % [id_no, tipo])
 			continue
 		for alvo in alvos_de(def):
-			if not _nos.has(alvo):
+			if alvo != DESTINO_RETORNO_T5 and not _nos.has(alvo):
 				p.append("%s: destino inexistente '%s'" % [id_no, alvo])
 		if tipo == "escolha":
 			if not (def.get("opcoes") is Array) or (def["opcoes"] as Array).is_empty():

@@ -1,6 +1,6 @@
 class_name WidgetRelogio
 extends PanelContainer
-## Relógio grande da área de trabalho: só a hora real do sistema (o jogo não tem dias nem calendário).
+## Relógio grande da área de trabalho: hora atual do sistema (sessão contínua, sem quebra artificial por dias).
 ## Atualiza só quando o minuto muda (sinal do RelogioGlobal): sem Timer próprio.
 ## A estrutura (painel, margens e os três rótulos) está em widget_relogio.tscn.
 
@@ -24,7 +24,7 @@ func _exit_tree() -> void:
 
 func atualizar() -> void:
 	_rot_hora.text = RelogioGlobal.hora_texto()
-	_rot_data.text = ""   # sem calendário no jogo: o relógio mostra só a hora
+	_rot_data.text = ""
 	_rot_data.visible = false
 	_rot_dia.text = "HUMAXOS"
 

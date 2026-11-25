@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://shared/ui/caixa_entrada_visual/scripts/caixa_entrada_visual.gd" id="1_caixa"]
+
+[node name="CaixaEntradaVisual" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 34)
+focus_mode = 2
+mouse_default_cursor_shape = 2
+script = ExtResource("1_caixa")
+
+[node name="Rotulo" type="Label" parent="."]
+layout_mode = 2
+mouse_filter = 2
+text = "Escreva uma mensagem..."
+vertical_alignment = 1

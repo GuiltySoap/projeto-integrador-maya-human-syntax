@@ -16,5 +16,7 @@ bool ui_ler_linha(char *buf, size_t cap);
 bk_status ui_ler_inteiro(int min, int max, int *out);
 /* Executa um turno. Devolve BK_ERR_IO se a entrada acabou no meio dele. `jogo` e `turno` não podem ser nulos. */
 bk_status executar_turno(GameState *jogo, const Turn *turno);
+/* Idem, devolvendo o ID da escolha tomada em `escolha_id_out` (se não for NULL). */
+bk_status executar_turno_com_escolha(GameState *jogo, const Turn *turno, int *escolha_id_out);
 
 #endif

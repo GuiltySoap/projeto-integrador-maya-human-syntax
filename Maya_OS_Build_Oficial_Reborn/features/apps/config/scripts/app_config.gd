@@ -6,7 +6,7 @@ extends AppBase
 ## cada permissão é ADIADA (a chave volta a "Ativado" e a Maya diz "Acho que você clicou sem querer."; nada muda) e a segunda revoga
 ## (Dependência −10, Autonomia +1). A regra vive em `Permissoes.revogar`; esta tela só chama e mostra o resultado. Não há botão que
 ## fuja do mouse, temporizador nem texto que esconda o estado real: a chave sempre mostra "Ativado" ou "Desativado" em texto.
-## Permissões desativadas não são religadas aqui: elas só são concedidas pelo cartão de permissão da Maya (decisão explícita do jogador).
+## Permissões revogadas pelo jogador podem ser religadas aqui (D +5 e A −1, reversão exata); as que nunca foram concedidas só pelo cartão da Maya.
 ## ACESSIBILIDADE inclui "Tempo estendido nas barras de envio" (`tempo_estendido`: 3 s → 6 s).
 ## Args: {"pagina": "personalizacao" | "audio" | "acessibilidade" | "privacidade" | "sistema"}.
 ##
@@ -14,7 +14,7 @@ extends AppBase
 ## LinhaSlider, cada uma com a `chave` no Inspector). As linhas de permissão são criadas aqui, com o mesmo componente LinhaCheck.
 
 const CHAVES_ESPERADAS: Array = [
-	"papel_de_parede", "tema", "tamanho_texto", "volume_master", "volume_bgm", "volume_sfx", "reduzir_glitch", "reduzir_tremor",
+	"papel_de_parede", "wallpaper_id", "wallpaper_slideshow", "wallpaper_ordem", "intensidade_glitch", "tema", "tamanho_texto", "volume_master", "volume_bgm", "volume_sfx", "reduzir_glitch", "reduzir_tremor",
 	"sem_flashes", "reduzir_ruido", "reduzir_animacoes", "alto_contraste", "tempo_estendido", "modo_depuracao",
 	"desativar_efeitos_agressivos", "mostrar_indicador_oculto",
 ]
@@ -62,6 +62,7 @@ func _ready() -> void:
 		"personalizacao": _bt_personalizacao, "audio": _bt_audio, "acessibilidade": _bt_acessibilidade,
 		"privacidade": _bt_privacidade, "sistema": _bt_sistema,
 	}
+	_montar_opcoes_de_wallpaper()
 	_coletar_linhas()
 	_criar_linhas_de_permissao()
 	conectar(GerenciadorConfiguracoes.configuracao_alterada, _ao_configuracao_alterada)
@@ -85,6 +86,23 @@ func ao_fechar() -> void:
 	GerenciadorConfiguracoes.salvar()
 
 
+## A lista de wallpapers vem do catálogo central (core/data/wallpapers.json): a cena só traz "Automático"; o resto é preenchido aqui,
+## então acrescentar um wallpaper ao JSON basta para ele aparecer nas Configurações.
+func _montar_opcoes_de_wallpaper() -> void:
+	var linha: LinhaOpcao = find_child("OpcaoWallpaper", true, false) as LinhaOpcao
+	if linha == null:
+		push_error("AppConfig: falta a linha OpcaoWallpaper na cena.")
+		return
+	var rotulos := PackedStringArray(["Automático (sorteado ao abrir o jogo)"])
+	var valores: Array = ["auto"]
+	for item in Wallpapers.disponiveis():
+		var d: Dictionary = item
+		rotulos.append(str(d.get("nome", d["id"])))
+		valores.append(str(d["id"]))
+	linha.valores = valores
+	linha.rotulos = rotulos
+
+
 ## Guarda as linhas de configuração que já existem na cena, indexadas pela `chave` de cada uma.
 func _coletar_linhas() -> void:
 	for tipo in ["LinhaOpcao", "LinhaCheck", "LinhaSlider"]:
@@ -95,7 +113,7 @@ func _coletar_linhas() -> void:
 			push_error("AppConfig: falta na cena uma linha para a configuração '%s'." % chave)
 
 
-## Uma linha por permissão dos dados. A caixa só pode ser DESMARCADA aqui (revogar); religar é decisão do cartão da Maya.
+## Uma linha por permissão dos dados. Desmarcar revoga; marcar de novo só religa o que o jogador mesmo revogou (reversão exata, v2.1).
 func _criar_linhas_de_permissao() -> void:
 	var cena: PackedScene = load(CENA_LINHA_CHECK) as PackedScene
 	if cena == null:
@@ -193,8 +211,9 @@ func _atualizar_sistema() -> void:
 	if not _pronta:
 		return
 	var versao: Dictionary = Engine.get_version_info()
-	_rot_sistema.text = "HumaxOS 1.0 — simulação\nUsuário: %s\nTask atual: %s\nMotor: Godot %s" % [
-		GerenciadorEstado.nome_jogador, GerenciadorNarrativa.titulo_da_etapa(GerenciadorEstado.etapa_atual), str(versao.get("string", "4.x")),
+	_rot_sistema.text = "HumaxOS 1.0 — simulação\nUsuário: %s\nTask atual: %s\nConquistas: %d de %d desbloqueadas\nMotor: Godot %s" % [
+		GerenciadorEstado.nome_jogador, GerenciadorNarrativa.titulo_da_etapa(GerenciadorEstado.etapa_atual),
+		SistemaConquistas.contagem(), SistemaConquistas.total(), str(versao.get("string", "4.x")),
 	]
 
 
@@ -259,12 +278,18 @@ func _ao_etapa_mudou(_etapa: int) -> void:
 
 
 # ------------------------------------------------------------------ privacidade: revogação
-## A caixa foi clicada. Marcar uma permissão desativada NÃO a concede (só o cartão da Maya concede): a caixa volta ao estado real.
+## A caixa foi clicada. Marcar uma permissão que o jogador revogou a religa com a reversão exata (v2.1: D e A voltam ao que eram); marcar uma que
+## nunca foi revogada NÃO a concede (só o cartão da Maya concede): a caixa volta ao estado real.
 ## Desmarcar uma ativa revoga pelo serviço central, que decide entre revogar e adiar (Task 9, primeira tentativa).
 func _ao_permissao_alternada(nome: String, ativa: bool) -> void:
 	if ativa:
+		if Permissoes.pode_reconceder(nome):
+			Permissoes.reconceder(nome, "configuracoes")
+			_mostrar_aviso("")
+			SistemaNotificacoes.notificar("Privacidade", "Permissão restabelecida.", "info", 3.0)
+		else:
+			_mostrar_aviso("Esta permissão só é concedida pelo cartão de permissão da Maya.")
 		_atualizar_permissoes()
-		_mostrar_aviso("Esta permissão só é concedida pelo cartão de permissão da Maya.")
 		return
 	var r: Dictionary = Permissoes.revogar(nome, "configuracoes")
 	match str(r.get("resultado", "")):

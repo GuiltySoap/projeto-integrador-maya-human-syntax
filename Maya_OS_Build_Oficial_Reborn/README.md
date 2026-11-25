@@ -1,6 +1,10 @@
 # Maya Human Syntax
 
-Jogo de terror tecnológico em **Godot 4.7** (GDScript 2.0), feito como um sistema operacional simulado, o **HumaxOS**. Durante cinco dias, o jogador usa um computador gerenciado por uma assistente de IA aparentemente gentil, a **Maya**, e descobre o que ela faz com os seus arquivos, mensagens e agenda.
+Jogo de terror tecnológico em **Godot 4.7** (GDScript 2.0), feito como um sistema operacional simulado, o **HumaxOS**.
+
+> **Roteiro atual: v2.1** (9 Tasks, sem dias; veja [`docs/18_roteiro_v2.md`](docs/18_roteiro_v2.md)). A tabela de dias e o parágrafo "Estado do projeto" abaixo descrevem a versão anterior (5 dias) e são histórico.
+
+Na versão anterior, durante cinco dias, o jogador usa um computador gerenciado por uma assistente de IA aparentemente gentil, a **Maya**, e descobre o que ela faz com os seus arquivos, mensagens e agenda.
 
 | Dia | A Maya | O que acontece |
 |---|---|---|

@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bbdu66okmlghc" path="res://features/apps/mensageiro/scenes/item_contato.tscn" id="2_itemcon"]
 [ext_resource type="PackedScene" uid="uid://bgqtvg055f8tu" path="res://features/apps/mensageiro/components/balao_chat/scenes/balao_chat.tscn" id="3_balaoch"]
 [ext_resource type="PackedScene" uid="uid://bn0ynkjb1llw4" path="res://features/apps/mensageiro/scenes/item_escolha.tscn" id="4_itemesc"]
+[ext_resource type="PackedScene" path="res://shared/ui/caixa_entrada_visual/scenes/caixa_entrada_visual.tscn" id="5_caixa"]
 
 [node name="AppMensageiro" type="Control"]
 layout_mode = 3
@@ -129,7 +130,7 @@ unique_name_in_owner = true
 [node name="RotuloEscolher" type="Label" parent="Raiz/PainelConversa/AreaEscolhas"]
 layout_mode = 2
 theme_type_variation = &"RotuloFraco12"
-text = "Escolha como responder (não há digitação livre):"
+text = "Escolha como responder:"
 
 [node name="RotuloDica" type="Label" parent="Raiz/PainelConversa"]
 layout_mode = 2
@@ -139,4 +140,8 @@ text = "A Maya bloqueou este contato “para a sua proteção”. Mensagens envi
 autowrap_mode = 3
 visible = false
 custom_minimum_size = Vector2(1, 0)
+unique_name_in_owner = true
+
+[node name="CaixaEntrada" parent="Raiz/PainelConversa" instance=ExtResource("5_caixa")]
+layout_mode = 2
 unique_name_in_owner = true

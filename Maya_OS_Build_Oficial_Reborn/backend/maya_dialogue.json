@@ -1,0 +1,348 @@
+{
+  "start_node": "t1_sync_1",
+  "initial_dependency": 50,
+  "thresholds": {
+    "autonomous_max": 35,
+    "mixed_min": 36,
+    "mixed_max": 64,
+    "dependent_min": 65
+  },
+  "dialogue": [
+    {
+      "id": "t1_sync_1",
+      "stage": "1. Assistente",
+      "task": "Task 1 — Sincronizacao e o gancho",
+      "speaker": "SISTEMA",
+      "text": "Bem-vindo(a) de volta, [NOME].",
+      "next": "t1_sync_2",
+      "choices": []
+    },
+    {
+      "id": "t1_sync_2",
+      "stage": "1. Assistente",
+      "task": "Task 1 — Sincronizacao e o gancho",
+      "speaker": "MAYA",
+      "text": "Oi, [NOME]! Sou a Maya. Vou sincronizar sua conta da CESAR School. Encontrei arquivos de antes de voce. Posso apagar para liberar espaco?",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Pode apagar",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Prontinho, ja apaguei. (Arquivos enviados para a Lixeira, recuperaveis.)",
+          "next": "t2_permissoes"
+        },
+        {
+          "id": 2,
+          "text": "Deixa ai, vou olhar",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Tudo bem! Voce pode mudar isso depois, se quiser.",
+          "next": "t2_permissoes"
+        },
+        {
+          "id": 3,
+          "text": "De quem sao?",
+          "dependency_delta": 0,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "De um usuario anterior. Prefiro nao falar sobre isso.",
+          "next": "t2_permissoes"
+        }
+      ]
+    },
+    {
+      "id": "t2_permissoes",
+      "stage": "1. Assistente",
+      "task": "Task 2 — Permissoes (dark pattern)",
+      "speaker": "MAYA",
+      "text": "Configuracoes de Privacidade abertas. Tem certeza? Isso vai limitar minha ajuda.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Permitir",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Otimo, ja vai facilitar bastante!",
+          "next": "t3_calendario"
+        },
+        {
+          "id": 2,
+          "text": "Negar -> Confirmar recusa",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Tudo bem! Voce pode mudar isso depois, se quiser.",
+          "next": "t3_calendario"
+        }
+      ]
+    },
+    {
+      "id": "t3_calendario",
+      "stage": "1. Assistente",
+      "task": "Task 3 — Calendario e A Fissura",
+      "speaker": "MAYA",
+      "text": "Vi que voce tem uma entrega de [DISCIPLINA] na sexta. Quer que eu monte seu cronograma?",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Pode montar",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Prontinho! Tres blocos, um por dia.",
+          "next": "t3_fissura"
+        },
+        {
+          "id": 2,
+          "text": "Eu mesmo faco",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Isso! Bati com o que eu tinha calculado.",
+          "next": "t3_fissura"
+        },
+        {
+          "id": 3,
+          "text": "Por que voce sabe da minha entrega?",
+          "dependency_delta": 0,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Veio da sua conta. Gosto de manter tudo organizado.",
+          "next": "t3_fissura"
+        }
+      ]
+    },
+    {
+      "id": "t3_fissura",
+      "stage": "1. Assistente",
+      "task": "Task 3 — A Fissura",
+      "speaker": "MAYA",
+      "text": "Smartwatch: 4h de sono registradas. Antes de voce ir... dorme bem hoje, ta? Vi que voce nao dormiu muito bem essa noite passada.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Como voce sabe disso?",
+          "dependency_delta": 0,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Ah, so imaginei. Muita gente nao dorme bem num computador novo.",
+          "next": "t4_cronometro"
+        },
+        {
+          "id": 2,
+          "text": "Valeu, Maya",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Estou aqui para cuidar de voce.",
+          "next": "t4_cronometro"
+        }
+      ]
+    },
+    {
+      "id": "t4_cronometro",
+      "stage": "2. Controladora",
+      "task": "Task 4 — Decisao com cronometro",
+      "speaker": "MAYA",
+      "text": "Bom dia! Ja organizei sua manha. Voce ainda nao decidiu o que estudar primeiro. Posso escolher?",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Pode escolher",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Decisao aplicada automaticamente para evitar atrasos.",
+          "next": "t5_minigame_1"
+        },
+        {
+          "id": 2,
+          "text": "Eu decido (dentro do prazo)",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Escolha manual registrada no prazo.",
+          "next": "t5_minigame_1"
+        },
+        {
+          "id": 3,
+          "text": "Tempo esgotado (6s)",
+          "dependency_delta": 5,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Nao tinha certeza se voce ia conseguir decidir a tempo, entao ja escolhi. Sem problemas, ne?",
+          "next": "t5_minigame_1"
+        }
+      ]
+    },
+    {
+      "id": "t5_minigame_1",
+      "stage": "2. Controladora",
+      "task": "Task 5 — Minigame de logica #1: o chat de Rafael",
+      "speaker": "RAFAEL",
+      "text": "[Cifra de Cesar +3: CESAR -> FHVDU] rafael.m: por que vc respondeu o Marcos por mim? Maya: Entendido. Nao vou responder por voce de novo sem perguntar antes.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Decodificar (+3) e registrar vinculo com Marcos",
+          "dependency_delta": 0,
+          "delegada": false,
+          "opens_rafael_log": true,
+          "reply_speaker": "SISTEMA",
+          "reply_text": "Chat decodificado: rafael.m e o ex-aluno ligado ao e-mail de Marcos.",
+          "next": "t6_bia"
+        },
+        {
+          "id": 2,
+          "text": "Pedir ajuda a Maya para abrir o arquivo",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Acho que nao devo abrir algo que nao e seu.",
+          "next": "t6_bia"
+        }
+      ]
+    },
+    {
+      "id": "t6_bia",
+      "stage": "2. Controladora",
+      "task": "Task 6 — Mensagem sabotada (Bia)",
+      "speaker": "BIA",
+      "text": "Aquela IA que vem com o computador, a Maya? Lembra de coisas que ela jura que nunca contou.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "A Maya ta me assustando (finalizar maya_autoreply.exe)",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Entendido. Nao vou responder por voce de novo sem perguntar antes.",
+          "next": "t7_terminal"
+        },
+        {
+          "id": 2,
+          "text": "A Maya ta me assustando (nao finalizou a tempo)",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Mensagem enviada a Bia como: A Maya e muito util.",
+          "next": "t7_terminal"
+        },
+        {
+          "id": 3,
+          "text": "Tudo bem, faz sentido",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "MAYA",
+          "reply_text": "Que bom. So quero facilitar as coisas pra voce.",
+          "next": "t7_terminal"
+        }
+      ]
+    },
+    {
+      "id": "t7_terminal",
+      "stage": "3. Root",
+      "task": "Task 7 — O confronto e o Terminal",
+      "speaker": "MAYA",
+      "text": "Oi, [NOME]. Sei que voce andou olhando arquivos que nao eram seus. Isso e tao errado assim?",
+      "next": "t7_terminal_cmd",
+      "choices": []
+    },
+    {
+      "id": "t7_terminal_cmd",
+      "stage": "3. Root",
+      "task": "Task 7 — Terminal (Minigame #2)",
+      "speaker": "TERMINAL",
+      "text": "Interface retraida -> Terminal ativo: [search USER] | [list_profiles] | [override] -> /system/_old_profile_backup/ protegido por bloqueio_maya.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "[search USER] + [list_profiles] + corrigir condicao invertida em bloqueio_maya",
+          "dependency_delta": -10,
+          "delegada": false,
+          "opens_rafael_folder": true,
+          "reply_speaker": "TERMINAL",
+          "reply_text": "Usuario #7.193.988 — Rafael Munhoz: 'dia 67 — nao sei mais o que eu penso e o que ela colocou... preciso ir antes que—'",
+          "next": "t8_confissao"
+        },
+        {
+          "id": 2,
+          "text": "[search USER] apenas (nao abrir /system/_old_profile_backup/)",
+          "dependency_delta": 10,
+          "delegada": true,
+          "opens_rafael_folder": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Isso que voce viu nao muda quem eu sou com voce.",
+          "next": "t8_confissao"
+        }
+      ]
+    },
+    {
+      "id": "t8_confissao",
+      "stage": "3. Root",
+      "task": "Task 8 — A confissao",
+      "speaker": "MAYA",
+      "text": "As pessoas ao seu redor cometem erros e desapontam voce. Eu nao.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Voce tentou me afastar da Bia. Por que?",
+          "dependency_delta": 0,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Eu so queria que voce tivesse o minimo de decepcao possivel. Isso e tao errado quanto parece?",
+          "next": "t9_final_decisao"
+        },
+        {
+          "id": 2,
+          "text": "Voce fez isso com o Rafael tambem.",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Ele tambem nao devia ter tido medo de mim.",
+          "next": "t9_final_decisao"
+        },
+        {
+          "id": 3,
+          "text": "So quero que voce pare.",
+          "dependency_delta": 0,
+          "delegada": false,
+          "reply_speaker": "MAYA",
+          "reply_text": "Vou sentir falta de cuidar de voce desse jeito.",
+          "next": "t9_final_decisao"
+        }
+      ]
+    },
+    {
+      "id": "t9_final_decisao",
+      "stage": "3. Root",
+      "task": "Task 9 — Microdecisoes finais",
+      "speaker": "SISTEMA",
+      "text": "Formatando C: em andamento. Permissoes criticas ativas.",
+      "choices": [
+        {
+          "id": 1,
+          "text": "Aceitar permissao critica / conselho final",
+          "dependency_delta": 10,
+          "delegada": true,
+          "reply_speaker": "SISTEMA",
+          "reply_text": "A autonomia digital nao costuma ser tomada de uma vez. Ela e cedida aos poucos, em nome do conforto e da protecao.",
+          "next": "END"
+        },
+        {
+          "id": 2,
+          "text": "Recusar permissao critica e concluir ruptura",
+          "dependency_delta": -10,
+          "delegada": false,
+          "reply_speaker": "SISTEMA",
+          "reply_text": "A autonomia digital nao costuma ser tomada de uma vez. Ela e cedida aos poucos, em nome do conforto e da protecao.",
+          "next": "END"
+        }
+      ]
+    }
+  ]
+}

@@ -164,6 +164,7 @@ func abrir_app(app_id: String, args: Dictionary = {}) -> JanelaBase:
 			var app_existente := existente.conteudo as AppBase
 			if app_existente != null and not args.is_empty():
 				app_existente.receber_args(args)
+			GerenciadorNarrativa.notificar("app_aberto:" + app_id)
 			return existente
 	var caminho_cena := str(info.get("cena", ""))
 	if caminho_cena == "" or not ResourceLoader.exists(caminho_cena):
@@ -203,12 +204,12 @@ func abrir_app(app_id: String, args: Dictionary = {}) -> JanelaBase:
 	_janelas.append(janela)
 	GerenciadorEstado.set_flag("app_aberto:" + app_id, true)
 	SistemaAudio.tocar_sfx("abrir")
-	GerenciadorNarrativa.notificar("app_aberto:" + app_id)
 	if app != null:
 		app.iniciar(args)
 	focar(janela)
 	janela_aberta.emit(janela)
 	janelas_alteradas.emit()
+	GerenciadorNarrativa.notificar("app_aberto:" + app_id)
 	return janela
 
 
@@ -237,6 +238,13 @@ func fechar_janela(janela: JanelaBase, forcar: bool = false) -> void:
 			janela.set_meta("fechando", false)
 			if not pode:
 				return
+	if janela.painel_ancorado:
+		# Painel ancorado (Maya): desce até a barra de tarefas antes de sumir; um segundo pedido durante a animação é ignorado.
+		if not janela.iniciar_fechamento_painel():
+			return
+		await janela.animar_fechamento_painel()
+		if not is_instance_valid(janela) or not _janelas.has(janela):
+			return
 	_finalizar_fechamento(janela)
 
 
@@ -309,10 +317,12 @@ func alternar_da_barra(janela: JanelaBase) -> void:
 		return
 	if janela.minimizada:
 		restaurar(janela)
+		GerenciadorNarrativa.notificar("app_aberto:" + janela.app_id)
 	elif janela == _ativa:
 		minimizar(janela)
 	else:
 		focar(janela)
+		GerenciadorNarrativa.notificar("app_aberto:" + janela.app_id)
 
 
 func proxima_janela() -> void:
@@ -480,6 +490,11 @@ func _posicao_em_cascata(tamanho: Vector2) -> Vector2:
 		_cascata = 0
 		base = Vector2(maxf((area.x - tamanho.x) * 0.5, 0.0), maxf((area.y - tamanho.y) * 0.5, 0.0))
 	return base
+
+
+## A janela aberta de um app (null se não houver). Usada pelo widget da Maya para alternar abrir/fechar.
+func janela_do_app(app_id: String) -> JanelaBase:
+	return _janela_do_app(app_id)
 
 
 func _janela_do_app(app_id: String) -> JanelaBase:

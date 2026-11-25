@@ -43,6 +43,8 @@ static var _progresso: float = 0.0
 static var _geracao: int = 0
 ## Recado de uma cena para a seguinte (ex.: "abrir o registro de novo jogo"). Lido uma única vez por quem chega.
 static var _contexto: Dictionary = {}
+## Cortina temporária usada para suavizar a transição entre telas (criada na raiz e removida antes de encerrar).
+static var _cortina: CanvasLayer = null
 
 
 ## Há uma troca de cena em andamento? Telas e atalhos (como o ESC da pausa) consultam isto para não competir com ela.
@@ -113,9 +115,38 @@ static func liberar() -> void:
 	_em_transicao = false
 	_destino = ""
 	_progresso = 0.0
+	_remover_cortina()
 
 
 # ------------------------------------------------------------------ internos
+static func _animar_transicao() -> bool:
+	return DisplayServer.get_name() != "headless" and GerenciadorConfiguracoes.animacoes_permitidas()
+
+
+static func _criar_cortina(arvore: SceneTree) -> ColorRect:
+	_remover_cortina()
+	var camada := CanvasLayer.new()
+	camada.layer = 128
+	camada.process_mode = Node.PROCESS_MODE_ALWAYS
+	var ret := ColorRect.new()
+	ret.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ret.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ret.color = Color(0.03, 0.025, 0.06, 0.0)
+	camada.add_child(ret)
+	arvore.root.add_child(camada)
+	_cortina = camada
+	return ret
+
+
+static func _remover_cortina() -> void:
+	if _cortina != null and is_instance_valid(_cortina):
+		var pai := _cortina.get_parent()
+		if pai != null:
+			pai.remove_child(_cortina)
+		_cortina.queue_free()
+	_cortina = null
+
+
 static func _executar(arvore: SceneTree, caminho: String, ao_falhar: Callable, preparar: Callable, geracao: int) -> void:
 	# Um quadro de espera ANTES de tudo: uma cena já em memória (a área de trabalho que o monitor virtual acabou de usar) carregaria na hora e a troca
 	# inteira, inclusive uma falha, terminaria dentro da própria chamada de `ir_para`; assim quem recebe `true` sempre vê a guarda ligada e a falha
@@ -129,6 +160,16 @@ static func _executar(arvore: SceneTree, caminho: String, ao_falhar: Callable, p
 	if pacote == null or not pacote.can_instantiate():
 		_falhar(geracao, "a cena não pôde ser carregada: %s" % caminho, ao_falhar)
 		return
+	var ret_cortina: ColorRect = null
+	if _animar_transicao():
+		ret_cortina = _criar_cortina(arvore)
+		var tw_in := arvore.create_tween()
+		tw_in.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw_in.tween_property(ret_cortina, "color:a", 1.0, 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		await tw_in.finished
+		if geracao != _geracao:
+			_remover_cortina()
+			return
 	if preparar.is_valid():
 		var resultado: Variant = preparar.call()
 		if typeof(resultado) == TYPE_BOOL and not bool(resultado):
@@ -142,6 +183,15 @@ static func _executar(arvore: SceneTree, caminho: String, ao_falhar: Callable, p
 	# A cena nova só entra na árvore no fim do quadro: a guarda fica até ela estar lá e ter rodado o primeiro quadro.
 	await arvore.process_frame
 	await arvore.process_frame
+	if geracao != _geracao:
+		_remover_cortina()
+		return
+	if ret_cortina != null and is_instance_valid(ret_cortina):
+		var tw_out := arvore.create_tween()
+		tw_out.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw_out.tween_property(ret_cortina, "color:a", 0.0, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		await tw_out.finished
+	_remover_cortina()
 	_encerrar(geracao)
 
 
@@ -178,6 +228,7 @@ static func _falhar(geracao: int, motivo: String, ao_falhar: Callable) -> void:
 static func _encerrar(geracao: int) -> void:
 	if geracao != _geracao:
 		return
+	_remover_cortina()
 	_em_transicao = false
 	_destino = ""
 	_progresso = 0.0
