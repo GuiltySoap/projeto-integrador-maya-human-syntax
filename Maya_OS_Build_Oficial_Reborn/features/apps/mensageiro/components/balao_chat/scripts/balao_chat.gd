@@ -24,6 +24,7 @@ const TEXTO_OCULTA := "Mensagem ocultada pela Maya: pode te deixar ansioso."
 
 var _entrada: Dictionary = {}
 var _largura_max: int = 480
+var _largura_texto: float = -1.0   ## largura natural do texto medida (px); -1 = ainda não medida
 var _mostrando_original: bool = false
 var _pronto: bool = false
 
@@ -50,6 +51,30 @@ func _ready() -> void:
 ## Id da mensagem que este balão mostra ("" se ainda não foi configurado).
 func id_mensagem() -> String:
 	return str(_entrada.get("id", ""))
+
+
+## Controla quantos caracteres do balão estão visíveis (-1 mostra o texto inteiro, sem alterar a largura já medida).
+func definir_caracteres_visiveis(quantidade: int) -> void:
+	if _rot_texto != null:
+		_rot_texto.visible_characters = quantidade
+
+
+## O Label do texto (o Painel da Maya anima `visible_characters` nele, como o Mensageiro faz por `definir_caracteres_visiveis`).
+func rotulo_texto() -> Label:
+	return _rot_texto
+
+
+## Alinhamento do balão: true = à direita (jogador), false = à esquerda ou centralizado (Maya, sistema, outros).
+func alinhado_a_direita() -> bool:
+	return alignment == BoxContainer.ALIGNMENT_END
+
+
+func total_caracteres() -> int:
+	return _rot_texto.text.length() if _rot_texto != null else 0
+
+
+func texto_atual() -> String:
+	return _rot_texto.text if _rot_texto != null else ""
 
 
 ## entrada: item do histórico ({autor, tipo, texto, hora, id, oculta, texto_original, texto_digitado, assinada_por, pendente}).
@@ -79,6 +104,9 @@ func _aplicar() -> void:
 		_bolha.theme_type_variation = variacao_bolha_padrao
 
 	var etiquetas: PackedStringArray = PackedStringArray()
+	var nome_exibido := str(_entrada.get("nome_exibido", ""))
+	if nome_exibido != "":
+		etiquetas.append(nome_exibido)   # usado pelo Painel da Maya, onde o nome de quem fala aparece em cada balão
 	if oculta:
 		etiquetas.append("🔒 ocultada pela Maya")
 	if pela_maya:
@@ -118,8 +146,16 @@ func _mostrar_texto(texto: String, medir: bool) -> void:
 		return
 	var fonte: Font = _rot_texto.get_theme_font(&"font")
 	var tamanho: int = _rot_texto.get_theme_font_size(&"font_size")
-	var largura: float = fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamanho).x
-	_rot_texto.custom_minimum_size = Vector2(clampf(largura + 8.0, 64.0, float(_largura_max)), 0)
+	_largura_texto = fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tamanho).x
+	_rot_texto.custom_minimum_size = Vector2(clampf(_largura_texto + 8.0, 64.0, float(_largura_max)), 0)
+
+
+## Muda o teto de largura do balão DEPOIS de montado (a janela foi redimensionada ou ainda não estava diagramada quando o balão nasceu).
+## O texto continua com a largura natural quando cabe e só quebra linha quando passa do teto; não mexe em margens nem em espaçamento.
+func limitar_largura(largura_max: int) -> void:
+	_largura_max = largura_max
+	if _largura_texto >= 0.0 and is_instance_valid(_rot_texto):
+		_rot_texto.custom_minimum_size = Vector2(clampf(_largura_texto + 8.0, 64.0, float(_largura_max)), 0)
 
 
 # Ligado ao sinal pressed do BotaoReenviar na cena (sem uso no roteiro v2.0).

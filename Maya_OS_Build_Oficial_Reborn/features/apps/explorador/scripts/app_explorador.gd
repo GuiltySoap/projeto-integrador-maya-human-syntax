@@ -72,11 +72,24 @@ func _aplicar_args(args: Dictionary) -> void:
 		if _historico.is_empty():
 			_ir_para(SistemaArquivosVirtual.PASTA_USUARIO)
 		return
+	if destino.to_lower() == "rafael":
+		destino = _caminho_pasta_rafael()
+		if destino == "":
+			_ir_para(SistemaArquivosVirtual.PASTA_USUARIO)
+			return
 	var c := SistemaArquivosVirtual.resolver(destino)
 	if c != "" and SistemaArquivosVirtual.eh_arquivo(c):
 		_ir_para(SistemaArquivosVirtual.caminho_pai(c))
 		return
 	_ir_para(destino)
+
+
+func _caminho_pasta_rafael() -> String:
+	for candidato in ["/home/usuario/Rafael", "/home/usuario/Itens arquivados/Rafael"]:
+		var res := SistemaArquivosVirtual.resolver(candidato)
+		if res != "" and SistemaArquivosVirtual.eh_pasta(res):
+			return res
+	return ""
 
 
 ## Pode demorar (minigame de lógica da pasta bloqueada), então não retorna valor: é "dispare e esqueça".

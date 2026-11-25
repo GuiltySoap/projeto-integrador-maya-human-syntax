@@ -374,8 +374,9 @@ func _desconectar(sinal: Signal, alvo: Callable) -> void:
 		sinal.disconnect(alvo)
 
 
-func _ao_flag_alterada(_nome: String, _valor: Variant) -> void:
+func _ao_flag_alterada(nome: String, valor: Variant) -> void:
 	_marcar_sujo()
+	SistemaConquistas.ao_flag_alterada(nome, valor)
 
 
 func _ao_mensagem(_contato: String, _entrada: Dictionary) -> void:
@@ -428,6 +429,7 @@ func _ao_roteiro(_id_no: String) -> void:
 	_marcar_sujo()
 
 
-func _ao_final(_id_final: String) -> void:
+func _ao_final(id_final: String) -> void:
+	SistemaConquistas.ao_final_alcancado(id_final)
 	if habilitado:
 		salvar()

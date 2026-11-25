@@ -1,5 +1,12 @@
 #ifndef BK_COMMON_H
 #define BK_COMMON_H
+
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#ifndef __USE_MINGW_ANSI_STDIO
+#define __USE_MINGW_ANSI_STDIO 1
+#endif
+#endif
+
 /*
  * Tipos e utilidades comuns do backend em C (Maya Human Syntax).
  *
@@ -38,7 +45,11 @@ const char *bk_status_str(bk_status s);
 
 /* Escreve uma mensagem formatada em `err` (se não for NULL e cap > 0). Sempre termina a string com '\0'. */
 #if defined(__GNUC__) || defined(__clang__)
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#define BK_PRINTF(a, b) __attribute__((format(gnu_printf, a, b)))
+#else
 #define BK_PRINTF(a, b) __attribute__((format(printf, a, b)))
+#endif
 #else
 #define BK_PRINTF(a, b)
 #endif

@@ -5,7 +5,7 @@ extends AppBase
 ## deve ficar; blocos encaixados trocam de lugar. Quando o terceiro bloco é encaixado, a Maya preenche o quarto e diz que bateu com o que ela
 ## tinha calculado. [Concluir rotina] confirma; se "Sair com amigos" estiver antes de "Estudo", a Maya avisa do conflito ([Tenho certeza] /
 ## [Trocar]). A conclusão avisa a narrativa (`rotina_concluida`). O progresso fica salvo em `roteiro_aux["rotina"]`.
-## O roteiro deixa a alteração de estado desses dois botões como [ALTERAÇÃO DE ESTADO NÃO ESPECIFICADA]: só se guarda `rotina_resultado` (aux).
+## Pesos da v2.1: [Tenho certeza] D -5 e [Trocar] D +5 (A 0 nos dois). Guarda também `rotina_resultado` (aux).
 
 var _slots: Array = RotinaLogica.vazia()
 var _selecionado: String = ""
@@ -166,9 +166,11 @@ func _ao_conflito(escolha: String) -> void:
 	if escolha == "trocar":
 		_slots = RotinaLogica.resolver_trocando(_slots)
 		GerenciadorNarrativa.maya_diz("Assim fica melhor.")
+		GerenciadorEstado.alterar_dependencia_maya(5, &"t3_5_trocar")   # v2.1: cedeu ao controle dela, D +5, A 0
 		_finalizar("trocado")
 	else:
 		GerenciadorNarrativa.maya_diz("Ok. Anotado.")
+		GerenciadorEstado.alterar_dependencia_maya(-5, &"t3_5_tenho_certeza")   # v2.1: contrariou a Maya, D -5, A 0
 		_finalizar("anotado")
 
 

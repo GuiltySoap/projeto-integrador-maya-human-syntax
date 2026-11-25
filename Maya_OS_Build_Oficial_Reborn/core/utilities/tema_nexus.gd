@@ -7,6 +7,9 @@ extends RefCounted
 ## tests/exportar_tema/exportar_tema.tscn. Regrave-a quando mudar este arquivo ou tema_variacoes.gd.
 
 static var dia_atual: int = 1
+## Dependência da Maya (0 a 100) que tinge a cor de destaque. NÃO é uma cópia da variável do jogo: só o último valor APLICADO pela área de trabalho
+## (`AreaDeTrabalho.aplicar_feedback_dependencia`); no menu fica em 0 (paleta neutra).
+static var dependencia_visual: int = 0
 static var _paletas_cache: Dictionary = {}
 static var _fonte_mono: Font = null
 static var _fonte_ui: Font = null
@@ -43,12 +46,20 @@ static func definir_dia(d: int) -> void:
 	dia_atual = clampi(d, 1, 5)
 
 
+static func definir_dependencia(d: int) -> void:
+	dependencia_visual = clampi(d, 0, 100)
+
+
 ## Paleta efetiva: dia narrativo + preferências do jogador (tema manual e alto contraste).
 static func paleta() -> Dictionary:
 	var p: Dictionary = _paletas()[dia_atual].duplicate()
 	var tema := str(GerenciadorConfiguracoes.obter("tema"))
 	if ACENTOS_MANUAIS.has(tema):
 		p["acento"] = Color.html(ACENTOS_MANUAIS[tema])
+	if not bool(GerenciadorConfiguracoes.obter("alto_contraste")):
+		# Feedback da Dependência: a cor de destaque (bordas, botões, barras, realces da barra de tarefas, ícones) esquenta e avermelha de forma gradual.
+		# Com cor de destaque manual a tinta pela metade; com alto contraste não há tinta (contraste e legibilidade vêm antes).
+		p["acento"] = FeedbackDependencia.tingir(p["acento"], dependencia_visual, 0.5 if ACENTOS_MANUAIS.has(tema) else 1.0)
 	if bool(GerenciadorConfiguracoes.obter("alto_contraste")):
 		p["fundo"] = Color(0, 0, 0)
 		p["painel"] = Color(0.04, 0.04, 0.04)
@@ -60,7 +71,7 @@ static func paleta() -> Dictionary:
 	var a: Color = p["acento"]
 	p["borda"] = Color(a.r, a.g, a.b, 0.55 if not bool(GerenciadorConfiguracoes.obter("alto_contraste")) else 1.0)
 	var pn: Color = p["painel"]
-	p["vidro"] = Color(pn.r, pn.g, pn.b, 0.90 if not bool(GerenciadorConfiguracoes.obter("alto_contraste")) else 1.0)
+	p["vidro"] = Color(pn.r, pn.g, pn.b, 0.97 if not bool(GerenciadorConfiguracoes.obter("alto_contraste")) else 1.0)
 	return p
 
 
@@ -93,8 +104,13 @@ static func fonte_mono() -> Font:
 
 
 static func fonte_ui() -> Font:
-	if _fonte_ui == null and ResourceLoader.exists("res://shared/assets/fonts/ui.ttf"):
-		_fonte_ui = load("res://shared/assets/fonts/ui.ttf")
+	if _fonte_ui == null:
+		if ResourceLoader.exists("res://shared/assets/fonts/ui.ttf"):
+			_fonte_ui = load("res://shared/assets/fonts/ui.ttf")
+		else:
+			var f := SystemFont.new()
+			f.font_names = PackedStringArray(["Segoe UI Variable", "Inter", "Segoe UI", "Noto Sans", "Ubuntu", "Liberation Sans", "sans-serif"])
+			_fonte_ui = f
 	return _fonte_ui
 
 

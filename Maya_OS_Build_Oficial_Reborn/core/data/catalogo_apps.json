@@ -177,6 +177,7 @@
    "icone_arquivo": "res://shared/assets/icons/icone_maya.png",
    "cor": "#8b5cf6",
    "cena": "res://features/apps/maya/scenes/app_maya.tscn",
+   "painel_ancorado": true,
    "processo": "humax_maya.exe",
    "tamanho": [
     560,

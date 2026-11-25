@@ -6,6 +6,7 @@ extends AppBase
 ## Primeira recusa em nós com `confirma_recusa`: aparece "Manter recusa" / "Permitir", também do mesmo tamanho. Esc fecha a janela; o pedido
 ## pode ser reaberto no painel da Maya ("Ver o pedido de permissão"). A janela fecha sozinha quando o último cartão é decidido.
 
+var _rolagem: ScrollContainer = null
 var _rot_progresso: Label = null
 var _rot_nome: Label = null
 var _rot_pedido: Label = null
@@ -24,13 +25,20 @@ func _ready() -> void:
 	for lado in ["left", "right", "top", "bottom"]:
 		margem.add_theme_constant_override("margin_" + lado, 14)
 	add_child(margem)
-	var rolagem := ScrollContainer.new()
-	rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	margem.add_child(rolagem)
+	var raiz := VBoxContainer.new()
+	raiz.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raiz.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	raiz.add_theme_constant_override("separation", 10)
+	margem.add_child(raiz)
+	_rolagem = ScrollContainer.new()
+	_rolagem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rolagem.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_rolagem.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	raiz.add_child(_rolagem)
 	var coluna := VBoxContainer.new()
 	coluna.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	coluna.add_theme_constant_override("separation", 10)
-	rolagem.add_child(coluna)
+	_rolagem.add_child(coluna)
 	_rot_progresso = _rotulo(coluna, &"RotuloFraco11")
 	_rot_nome = _rotulo(coluna, &"RotuloTitulo18")
 	_rot_pedido = _rotulo(coluna, &"Rotulo15")
@@ -42,11 +50,13 @@ func _ready() -> void:
 	coluna.add_child(_ficha)
 	_rot_detalhes = _rotulo(coluna, &"RotuloAcento")
 	_rot_detalhes.visible = false
-	_rot_confirmacao = _rotulo(coluna, &"RotuloAcento")
+	_rot_confirmacao = _rotulo(raiz, &"RotuloAcento")
 	_rot_confirmacao.visible = false
+	var separador := HSeparator.new()
+	raiz.add_child(separador)
 	_caixa_botoes = HBoxContainer.new()
 	_caixa_botoes.add_theme_constant_override("separation", 8)
-	coluna.add_child(_caixa_botoes)
+	raiz.add_child(_caixa_botoes)
 	definir_titulo("Maya — pedido de permissão")
 	conectar(GerenciadorNarrativa.cartao_mudou, _atualizar)
 	conectar(GerenciadorNarrativa.apresentacao_mudou, _atualizar)
@@ -89,6 +99,8 @@ func _atualizar() -> void:
 	_confirmando = false
 	_rot_confirmacao.visible = false
 	_rot_detalhes.visible = false
+	if _rolagem != null:
+		_rolagem.scroll_vertical = 0
 	_rot_progresso.text = "Pedido %d de %d" % [int(cartao.get("indice", 0)) + 1, int(cartao.get("total", 1))]
 	_rot_nome.text = str(cartao.get("nome", ""))
 	_rot_pedido.text = str(cartao.get("pedido", ""))

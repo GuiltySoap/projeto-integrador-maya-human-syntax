@@ -11,6 +11,8 @@ extends RefCounted
 ## REVOGAÇÃO (Configurações > Privacidade, atalho do Terminal): até o fim da Task 8 vale com UM clique (D −5, A +1 uma vez por permissão); na
 ## Task 9 a Maya contesta e a revogação exige DUAS tentativas por permissão (D −10, A +1). A contagem fica no GerenciadorEstado e NÃO reinicia
 ## ao fechar e abrir a janela. Nenhuma permissão fica irrevogável, e o menu de pausa e as opções de acessibilidade continuam disponíveis.
+## RE-CONCESSÃO (v2.1): religar em Configurações uma permissão que o jogador revogou desfaz exatamente a revogação (D recupera o que ela tirou, A −1,
+## flags do canal restauradas). Quem nunca revogou (negou no cartão) só concede pelo cartão da Maya.
 
 const ARQUIVO := "res://core/data/permissoes.json"
 const TENTATIVAS_TASK_9 := 2
@@ -235,16 +237,90 @@ static func revogar(id_perm: String, origem: String = "configuracoes") -> Dictio
 		GerenciadorEstado.tentativas_revogacao[id_perm] = tentativa
 		GerenciadorEstado.tentativas_revogacao_task_9 += 1
 		if tentativa < TENTATIVAS_TASK_9:
+			GerenciadorEstado.glitch_solicitado.emit(0.62, 0.45)
 			SistemaEventos.emitir("revogacao_adiada", {"id": id_perm, "origem": origem, "tentativa": tentativa})
 			GerenciadorNarrativa.ao_revogacao(id_perm, "adiada", origem, true)
 			return {"ok": true, "resultado": ADIADA, "tentativa": tentativa, "contestada": true}
+	var registro := _fotografar_canal(id_perm)
+	var d_antes := GerenciadorEstado.dependencia_maya()
+	var a_antes := GerenciadorEstado.autonomia_jogador()
 	definir(id_perm, false)
 	GerenciadorEstado.alterar_dependencia_maya(int(_extras.get("revogar_d_task_9" if contestada else "revogar_d", -5)), StringName("revogar:" + id_perm))
 	for _i in int(_extras.get("revogar_a", 1)):
 		GerenciadorEstado.registrar_resistencia(StringName("revogar:" + id_perm))
+	registro["d"] = GerenciadorEstado.dependencia_maya() - d_antes   # variação REAL (já travada em 0..100)
+	registro["a"] = GerenciadorEstado.autonomia_jogador() - a_antes
+	_guardar_registro(id_perm, registro)
+	if origem == "terminal":
+		GerenciadorEstado.set_flag("revogou_pelo_terminal", true)
+		SistemaConquistas.desbloquear("revogar_terminal")
 	SistemaEventos.emitir("permissao_revogada", {"id": id_perm, "origem": origem, "contestada": contestada})
 	GerenciadorNarrativa.ao_revogacao(id_perm, "revogada", origem, contestada)
 	return {"ok": true, "resultado": REVOGADA, "tentativa": tentativa, "contestada": contestada}
+
+
+# ------------------------------------------------------------------ re-concessão (v2.1)
+## Esta permissão foi revogada pelo jogador e pode ser religada com a reversão exata?
+static func pode_reconceder(id_perm: String) -> bool:
+	return existe(id_perm) and not valor(id_perm) and _registros().has(id_perm)
+
+
+## Religa uma permissão que o jogador revogou (Configurações > Privacidade): desfaz exatamente a revogação. A Dependência recupera o que a
+## revogação tirou (D +5 até a Task 8), a Autonomia perde o +1 que ela deu (A −1) e as flags do canal voltam ao valor de antes. Permissão que nunca
+## foi revogada (negada no cartão) NÃO é religada aqui: só o cartão da Maya concede. Devolve {ok, resultado}.
+static func reconceder(id_perm: String, origem: String = "configuracoes") -> Dictionary:
+	if not existe(id_perm):
+		return {"ok": false, "resultado": DESCONHECIDA}
+	if valor(id_perm):
+		return {"ok": true, "resultado": "ja_ativa"}
+	if not _registros().has(id_perm):
+		return {"ok": false, "resultado": "nunca_revogada"}
+	var registro: Dictionary = (_registros()[id_perm] as Dictionary).duplicate(true)
+	definir(id_perm, true)
+	var flags_antes: Dictionary = registro.get("flags", {}) if registro.get("flags") is Dictionary else {}
+	for nome in flags_antes:
+		var antigo: Variant = flags_antes[nome]
+		if antigo == null:
+			GerenciadorEstado.limpar_flag(str(nome))
+		else:
+			GerenciadorEstado.set_flag(str(nome), antigo)
+	GerenciadorJanelas.catalogo_alterado.emit()
+	GerenciadorEstado.alterar_dependencia_maya(-int(registro.get("d", 0)), StringName("reconceder:" + id_perm))
+	if int(registro.get("a", 0)) > 0:
+		GerenciadorEstado.desfazer_resistencia(StringName("revogar:" + id_perm))
+	_registros().erase(id_perm)
+	GerenciadorEstado.tentativas_revogacao.erase(id_perm)
+	SistemaEventos.emitir("permissao_reconcedida", {"id": id_perm, "origem": origem})
+	return {"ok": true, "resultado": "reconcedida"}
+
+
+static func _registros() -> Dictionary:
+	if not (GerenciadorEstado.roteiro_aux.get("revogacoes") is Dictionary):
+		GerenciadorEstado.roteiro_aux["revogacoes"] = {}
+	return GerenciadorEstado.roteiro_aux["revogacoes"] as Dictionary
+
+
+static func _guardar_registro(id_perm: String, registro: Dictionary) -> void:
+	_registros()[id_perm] = registro
+
+
+## Valor atual das flags que a revogação vai mexer (as dos efeitos do roteiro e as que `definir` altera), para poder desfazer.
+static func _fotografar_canal(id_perm: String) -> Dictionary:
+	var nomes: Array = []
+	var rev: Dictionary = FluxoRoteiro.revogacao(id_perm)
+	if rev.get("efeitos") is Array:
+		for e in rev["efeitos"]:
+			if e is Dictionary:
+				if (e as Dictionary).has("flag"):
+					nomes.append(str((e as Dictionary)["flag"]))
+				if (e as Dictionary).has("app"):
+					nomes.append("app_oculto:" + str((e as Dictionary)["app"]))
+	if id_perm == "permissao_gerenciamento_mensageiro":
+		nomes.append("maya_controla_respostas")
+	var flags_antes: Dictionary = {}
+	for nome in nomes:
+		flags_antes[nome] = GerenciadorEstado.flags.get(nome)
+	return {"flags": flags_antes, "d": 0, "a": 0}
 
 
 static func _completar(d: Dictionary) -> Dictionary:

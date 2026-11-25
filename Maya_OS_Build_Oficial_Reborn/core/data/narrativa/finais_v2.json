@@ -170,7 +170,27 @@
       },
       {
        "tipo": "narracao",
-       "texto": "Você abre, resolve e envia sozinho, passo a passo."
+       "texto": "Você abre, resolve e envia sozinh{o/a}, passo a passo (Lista_4_Logica_Resolvida.txt):"
+      },
+      {
+       "tipo": "sistema",
+       "texto": "DISCIPLINA: Lógica de Programação — Lista 4\nALUNO(A): {NOME_JOGADOR} | STATUS: Concluída (envio manual)"
+      },
+      {
+       "tipo": "sistema",
+       "texto": "1. Escreva uma condição que verifique se uma variável 'tempo' é menor que 3.\nResposta: if (tempo < 3) { permitir_cancelamento = true; }"
+      },
+      {
+       "tipo": "sistema",
+       "texto": "2. Qual a saída de um laço 'while' quando a condição de parada nunca é atingida?\nResposta: O programa entra em loop infinito e trava a execução até ser interrompido manualmente."
+      },
+      {
+       "tipo": "sistema",
+       "texto": "3. Explique a diferença entre uma variável booleana e um contador inteiro.\nResposta: A booleana guarda apenas dois estados (verdadeiro ou falso), enquanto o contador acumula valores numéricos ao longo da execução."
+      },
+      {
+       "tipo": "narracao",
+       "texto": "Nota no rodapé do arquivo: \"Deu trabalho terminar isso às 2h da manhã, mas fui eu quem fiz.\""
       }
      ]
     },
@@ -279,13 +299,14 @@
    ],
    "epilogo": "Recusar não desliga o sistema. Só devolve a você o trabalho de decidir, e esse trabalho não acaba.",
    "respostas_obrigatorias": {
-    "O que acontece com a Maya?": "Fica sem nenhuma permissão, reduzida a responder quando chamada e a pedir de novo.",
+    "O que acontece com a Maya?": "Fica com no máximo 1 permissão não crítica (ou nenhuma), reduzida a responder quando chamada e a pedir de novo.",
     "Ela continua ativa?": "Sim.",
-    "As permissões são revogadas?": "Todas estão inativas, negadas desde o início ou revogadas na Task 9.",
+    "As permissões são revogadas?": "Estão inativas (no máximo 1 ativa, nunca o Mensageiro), negadas desde o início ou revogadas na Task 9.",
     "O Mensageiro volta ao controle do jogador?": "Sim.",
     "O sistema continua funcionando?": "Sim, com menos conforto: sem resumo de notificações, sem lembretes, sem ajuda nas entregas.",
     "A ameaça terminou ou só mudou?": "Mudou. Virou insistência: os pedidos de permissão continuam.",
-    "Rafael foi investigado?": "Nunca de forma profunda neste final. Investigação parcial: a pasta continua em Arquivos, sem resposta; sem investigação, a linha do Relatório (Pastas antigas: 1, guardada por mim) é o único vestígio."
+    "Rafael foi investigado?": "Nunca de forma profunda neste final. Investigação parcial: a pasta continua em Arquivos, sem resposta; sem investigação, a linha do Relatório (Pastas antigas: 1, guardada por mim) é o único vestígio.",
+    "Situação do Marcos": "Como a pasta do Rafael não foi enviada, o Marcos permanece sem conhecimento do caso e não participa deste final."
    }
   },
   "meio_termo_1": {

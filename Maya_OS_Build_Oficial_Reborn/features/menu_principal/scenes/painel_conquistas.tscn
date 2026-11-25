@@ -1,0 +1,107 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://features/menu_principal/scripts/painel_conquistas.gd" id="1_conq"]
+
+[node name="PainelConquistas" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_conq")
+
+[node name="Cortina" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.78)
+
+[node name="Centro" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Painel" type="PanelContainer" parent="Centro"]
+custom_minimum_size = Vector2(820, 0)
+layout_mode = 2
+theme_type_variation = &"PainelVidro"
+
+[node name="Margem" type="MarginContainer" parent="Centro/Painel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
+
+[node name="Caixa" type="VBoxContainer" parent="Centro/Painel/Margem"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Cabecalho" type="HBoxContainer" parent="Centro/Painel/Margem/Caixa"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RotuloTitulo" type="Label" parent="Centro/Painel/Margem/Caixa/Cabecalho"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"RotuloTitulo22"
+text = "Conquistas"
+
+[node name="RotuloResumo" type="Label" parent="Centro/Painel/Margem/Caixa/Cabecalho"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"RotuloAcento13Mono"
+text = "0 de 21 desbloqueadas (0%)"
+vertical_alignment = 1
+
+[node name="BarraProgresso" type="ProgressBar" parent="Centro/Painel/Margem/Caixa"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+max_value = 21.0
+show_percentage = false
+
+[node name="Rolagem" type="ScrollContainer" parent="Centro/Painel/Margem/Caixa"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 460)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Conteudo" type="VBoxContainer" parent="Centro/Painel/Margem/Caixa/Rolagem"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Separador" type="HSeparator" parent="Centro/Painel/Margem/Caixa"]
+layout_mode = 2
+
+[node name="Rodape" type="HBoxContainer" parent="Centro/Painel/Margem/Caixa"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Dica" type="Label" parent="Centro/Painel/Margem/Caixa/Rodape"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"RotuloFraco12Mono"
+text = "↑ ↓ ou roda do mouse rolam · Esc volta"
+vertical_alignment = 1
+
+[node name="BotaoVoltar" type="Button" parent="Centro/Painel/Margem/Caixa/Rodape"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 42)
+layout_mode = 2
+theme_type_variation = &"BotaoPrimario"
+text = "Voltar"
+
+[connection signal="pressed" from="Centro/Painel/Margem/Caixa/Rodape/BotaoVoltar" to="." method="_ao_voltar"]

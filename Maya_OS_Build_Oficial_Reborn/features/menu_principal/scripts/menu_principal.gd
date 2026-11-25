@@ -24,6 +24,7 @@ var _cx := Conexoes.new()
 @onready var _margem: MarginContainer = %MargemPrincipal
 @onready var _btn_novo: Button = %BotaoNovoJogo
 @onready var _btn_carregar: Button = %BotaoCarregar
+@onready var _btn_conquistas: Button = %BotaoConquistas
 @onready var _btn_opcoes: Button = %BotaoOpcoes
 @onready var _btn_creditos: Button = %BotaoCreditos
 @onready var _btn_sair: Button = %BotaoSair
@@ -34,20 +35,23 @@ var _cx := Conexoes.new()
 @onready var _rot_versao: Label = %Versao
 @onready var _painel_opcoes: PainelOpcoes = %PainelOpcoes
 @onready var _painel_creditos: PainelCreditos = %PainelCreditos
+@onready var _painel_conquistas: PainelConquistas = %PainelConquistas
 @onready var _dialogo: PainelConfirmacao = %DialogoConfirmacao
 @onready var _indicador: IndicadorCarregamento = %IndicadorCarregamento
 
 
 func _ready() -> void:
 	TemaNexus.definir_dia(1)
+	TemaNexus.definir_dependencia(0)   # o menu não tem Dependência: paleta neutra
 	TemaNexus.aplicar(get_tree())
 	# Chegar ao menu (do boot, da pausa, do fim de jogo) sempre encerra a sessão anterior e a trilha dela.
 	GerenciadorNarrativa.sair_do_jogo()
 	SistemaAudio.parar_bgm()
 	if not UiKit.refs_ok(self, {"Fundo": _fundo, "MargemPrincipal": _margem, "BotaoNovoJogo": _btn_novo, "BotaoCarregar": _btn_carregar,
-			"BotaoOpcoes": _btn_opcoes, "BotaoCreditos": _btn_creditos, "BotaoSair": _btn_sair, "LinhaStatus": _linha_status, "IconeStatus": _icone_status,
-			"MensagemStatus": _rot_status, "RotuloSalvamento": _rot_salvamento, "Versao": _rot_versao, "PainelOpcoes": _painel_opcoes,
-			"PainelCreditos": _painel_creditos, "DialogoConfirmacao": _dialogo, "IndicadorCarregamento": _indicador}):
+			"BotaoConquistas": _btn_conquistas, "BotaoOpcoes": _btn_opcoes, "BotaoCreditos": _btn_creditos, "BotaoSair": _btn_sair,
+			"LinhaStatus": _linha_status, "IconeStatus": _icone_status, "MensagemStatus": _rot_status, "RotuloSalvamento": _rot_salvamento,
+			"Versao": _rot_versao, "PainelOpcoes": _painel_opcoes, "PainelCreditos": _painel_creditos, "PainelConquistas": _painel_conquistas,
+			"DialogoConfirmacao": _dialogo, "IndicadorCarregamento": _indicador}):
 		return
 	_cx.ligar(GerenciadorConfiguracoes.configuracao_alterada, _ao_configuracao)
 	_aplicar_cores()
@@ -87,11 +91,12 @@ func _atualizar_estado() -> void:
 		_limpar_status()
 	else:
 		_mostrar_status(Sessao.MSG_SEM_REGISTRO, false)
+	_btn_conquistas.text = "Conquistas (%d/%d)" % [SistemaConquistas.contagem(), SistemaConquistas.total()]
 	_ligar_foco()
 
 
 func _ligar_foco() -> void:
-	UiKit.ligar_foco_circular([_btn_novo, _btn_carregar, _btn_opcoes, _btn_creditos, _btn_sair])
+	UiKit.ligar_foco_circular([_btn_novo, _btn_carregar, _btn_conquistas, _btn_opcoes, _btn_creditos, _btn_sair])
 
 
 func _aplicar_cores() -> void:
@@ -118,7 +123,7 @@ func _definir_ocupado(ocupado: bool, texto: String = "") -> void:
 	_ocupado = ocupado
 	if ocupado:
 		_indicador.mostrar(texto)
-	for botao in [_btn_novo, _btn_opcoes, _btn_creditos, _btn_sair]:
+	for botao in [_btn_novo, _btn_conquistas, _btn_opcoes, _btn_creditos, _btn_sair]:
 		(botao as Button).disabled = ocupado
 	_btn_carregar.disabled = ocupado or not bool(_ponto.get("existe", false))
 	if not ocupado:
@@ -127,7 +132,7 @@ func _definir_ocupado(ocupado: bool, texto: String = "") -> void:
 
 
 func _modal_aberto() -> bool:
-	return _dialogo.esta_aberto() or _painel_opcoes.esta_aberto() or _painel_creditos.esta_aberto()
+	return _dialogo.esta_aberto() or _painel_opcoes.esta_aberto() or _painel_creditos.esta_aberto() or _painel_conquistas.esta_aberto()
 
 
 ## Abre um painel por cima do menu: o que está atrás perde o foco (Tab/setas não vazam) até o painel fechar.
@@ -182,6 +187,14 @@ func _ao_carregar() -> void:
 	_definir_ocupado(true, "Restaurando a sessão…")
 	if not Sessao.carregar(get_tree(), Sessao.Origem.MENU, _ao_falha_de_carga):
 		_ao_falha_de_carga("recusado")
+
+
+func _ao_conquistas() -> void:
+	if _ocupado or _modal_aberto():
+		return
+	SistemaAudio.tocar_sfx("clique", -8.0)
+	_abrir_modal(_btn_conquistas)
+	_painel_conquistas.abrir()
 
 
 func _ao_opcoes() -> void:

@@ -13,9 +13,15 @@ extends Control
 @export var cena_icone: PackedScene
 
 var _cx := Conexoes.new()
+## Um valor de Dependência foi aplicado ao visual (faixa: neutra, morna_leve, morna, vermelha_sutil, vermelha_intensa).
+signal feedback_dependencia_aplicado(faixa: StringName)
+
 var _pronto: bool = false
+var _dependencia_aplicada: int = -1
+var _ultimo_glitch_dependencia_ms: int = -100000
 ## A sessão está terminando (final alcançado ou troca de cena em curso): o Esc não abre mais a pausa.
 var _encerrando: bool = false
+var _icones: Array = []
 
 @onready var _c_janelas: Control = %CamadaJanelas
 @onready var _c_modais: Control = %CamadaModais
@@ -174,12 +180,14 @@ func _atualizar_shell() -> void:
 
 
 func _reconstruir_icones() -> void:
+	_icones.clear()
 	UiKit.limpar_filhos(_grade_icones)
 	if cena_icone == null:
 		push_error("AreaDeTrabalho: 'cena_icone' não definida (veja area_de_trabalho.tscn).")
 		return
 	for info in GerenciadorJanelas.apps_da_area_de_trabalho():
 		_novo_icone(info)
+	_atualizar_badges_icones()
 
 
 func _novo_icone(info: Dictionary) -> void:
@@ -187,20 +195,90 @@ func _novo_icone(info: Dictionary) -> void:
 	icone.abrir_pedido.connect(_ao_icone_aberto)
 	_grade_icones.add_child(icone)
 	icone.configurar(info)
+	_icones.append(icone)
+
+
+func _atualizar_badges_icones() -> void:
+	if not GerenciadorNarrativa.jogo_ativo:
+		for item in _icones:
+			if is_instance_valid(item):
+				(item as IconeAreaDeTrabalho).definir_badge("")
+		return
+	var ap: Dictionary = GerenciadorNarrativa.apresentacao()
+	var contexto: String = str(ap.get("contexto", ""))
+	var espera: String = str(ap.get("espera", ""))
+	var app_do_no: String = str(ap.get("app", ""))
+	var opcoes: Array = ap.get("opcoes", [])
+	var nao_lidas_msg: int = 0
+	for id_contato in GerenciadorEstado.chat:
+		if str(id_contato) != "maya":
+			nao_lidas_msg += GerenciadorEstado.nao_lidas(str(id_contato))
+	var msg_pendente: bool = (contexto == "chat" and not opcoes.is_empty()) or espera == "abriu_mensageiro" or str(ap.get("tipo", "")) == "barra_envio"
+	var maya_pendente: bool = not GerenciadorJanelas.app_aberto("maya") and (
+		(contexto != "chat" and not opcoes.is_empty())
+		or (app_do_no != "" and not GerenciadorJanelas.app_aberto(app_do_no))
+		or espera == "retorno_desktop"
+	)
+	for item in _icones:
+		if not is_instance_valid(item):
+			continue
+		var icone := item as IconeAreaDeTrabalho
+		if icone.app_id == "messenger":
+			if nao_lidas_msg > 0:
+				icone.definir_badge(str(mini(nao_lidas_msg, 9)) + ("+" if nao_lidas_msg > 9 else ""), Color(0.92, 0.22, 0.34, 1.0))
+			elif msg_pendente:
+				icone.definir_badge("!", Color(0.96, 0.62, 0.04, 1.0))
+			else:
+				icone.definir_badge("")
+		elif icone.app_id == "maya":
+			if maya_pendente:
+				icone.definir_badge("!", Color(0.66, 0.33, 0.97, 1.0))
+			else:
+				icone.definir_badge("")
+		else:
+			icone.definir_badge("")
+
+
+func _ao_atualizar_badges_msg(_contato: String, _dados: Variant = null) -> void:
+	_atualizar_badges_icones()
+
+
+func _ao_flag_badge(nome: String, valor: Variant) -> void:
+	if nome.begins_with("conversa_lida:"):
+		_atualizar_badges_icones()
+	elif _pronto and valor is bool and (valor as bool):
+		if nome == "desktop_reduzido":
+			_efeito.disparar(0.65, 0.55)
+			SistemaNotificacoes.notificar("Maya · Área de trabalho otimizada", "Ocultei atalhos que distraem você. Só deixei o essencial.", "ia", 6.0)
+		elif nome == "apps_pausados_pela_maya":
+			_efeito.disparar(0.55, 0.45)
+			SistemaNotificacoes.notificar("Maya · Modo Foco ativado", "Pausei Mural, Jogos e Música para proteger seu tempo de estudo.", "ia", 6.0)
+		elif nome == "bia_censurada" or nome == "maya_interferiu_mensagem":
+			_efeito.disparar(0.48, 0.40)
+		elif nome == "pasta_rafael_aberta" or nome == "segredo_rafael_encontrado":
+			_efeito.disparar(0.52, 0.42)
 
 
 func _conectar() -> void:
 	_cx.ligar(GerenciadorNarrativa.janela_solicitada, _ao_janela_solicitada)
 	_cx.ligar(GerenciadorNarrativa.jogo_finalizado, _ao_final)
 	_cx.ligar(GerenciadorNarrativa.etapa_iniciada, _ao_etapa_iniciada)
+	_cx.ligar(GerenciadorNarrativa.apresentacao_mudou, _atualizar_badges_icones)
 	_cx.ligar(GerenciadorEstado.glitch_solicitado, _ao_glitch)
+	_cx.ligar(GerenciadorEstado.dependencia_alterada, _ao_dependencia_alterada)
+	_cx.ligar(GerenciadorEstado.permissao_alterada, _ao_permissao_feedback)
+	_cx.ligar(GerenciadorEstado.mensagem_recebida, _ao_atualizar_badges_msg)
+	_cx.ligar(GerenciadorEstado.mensagem_atualizada, _ao_atualizar_badges_msg)
+	_cx.ligar(GerenciadorEstado.flag_alterada, _ao_flag_badge)
 	_cx.ligar(GerenciadorJanelas.catalogo_alterado, _reconstruir_icones)
+	_cx.ligar(GerenciadorJanelas.janelas_alteradas, _atualizar_badges_icones)
 	_cx.ligar(GerenciadorConfiguracoes.configuracao_alterada, _ao_configuracao)
 
 
 ## Roda um quadro depois do _ready: com tudo montado, o roteiro pode começar (e as janelas que ele pediu antes de a cena existir abrem).
 func _iniciar_sessao() -> void:
 	_pronto = true
+	aplicar_feedback_dependencia(GerenciadorEstado.dependencia_maya(), &"sessao_iniciada")
 	_barra.atualizar_tudo()
 	_efeito.atualizar_base()
 	SistemaAudio.tocar_sfx("boot", -8.0)
@@ -221,7 +299,7 @@ func _ao_janela_solicitada(app_id: String, args: Dictionary) -> void:
 	GerenciadorJanelas.abrir_app(app_id, args)
 
 
-## Uma Task nova começou: a paleta acompanha o avanço da história.
+## Uma Task nova começou: a paleta, o papel de parede e a trilha sonora acompanham a escalada de forma contínua.
 func _ao_etapa_iniciada(etapa: int) -> void:
 	TemaNexus.definir_etapa(etapa)
 	TemaNexus.aplicar(get_tree())
@@ -229,10 +307,17 @@ func _ao_etapa_iniciada(etapa: int) -> void:
 	GerenciadorJanelas.atualizar_temas()
 	_atualizar_shell()
 	_efeito.atualizar_base()
-	SistemaAudio.tocar_bgm(clampi(ceili(etapa / 2.0), 1, 5))
+	if _pronto and etapa >= 3:
+		var forca_glitch: float = 0.28 if etapa <= 4 else (0.46 if etapa <= 6 else (0.62 if etapa <= 8 else 0.78))
+		_efeito.disparar(forca_glitch, 0.36 if etapa <= 6 else 0.52, etapa <= 4)
+	# Clímax: o início da Task 9 é um EVENTO narrativo explícito ("task_9_started" no catálogo de trilhas). Sem o arquivo do clímax,
+	# a trilha cai no fallback do catálogo (a trilha da Task 9, bgm_dia_5). Qualquer outra Task toca a trilha do estágio com crossfade.
+	if not (etapa >= 9 and SistemaAudio.evento_narrativo(&"task_9_started")):
+		SistemaAudio.tocar_bgm(clampi(ceili(float(etapa) / 2.0), 1, 5))
 
 
 func _ao_final(_id_final: String) -> void:
+	aplicar_feedback_dependencia(GerenciadorEstado.dependencia_maya(), &"final_iniciado")
 	_encerrando = true
 	GerenciadorNarrativa.pausado = true
 	GerenciadorJanelas.overlay_ativo = false
@@ -256,6 +341,41 @@ func _ao_falha_do_final(_motivo: String) -> void:
 	var dados_final: Dictionary = FluxoRoteiro.final_def(GerenciadorEstado.final_id)
 	var titulo: String = str(dados_final.get("nome", "FIM"))
 	_fim_de_jogo.abrir("%s\n\nA sessão chegou ao fim, mas o epílogo não pôde ser aberto." % titulo, TelaFimDeJogo.resumo_da_jornada(), Color.html("#8b5cf6"), false)
+
+
+## API CENTRAL do feedback da Dependência. `dependencia` vem SEMPRE de `GerenciadorEstado.dependencia_maya()` (nenhuma cópia do estado vive aqui).
+## Só reaplica o tema quando o valor mudou em relação ao último aplicado; o glitch pontual só dispara em contexto de resistência/recuperação de controle
+## com D alto (veja FeedbackDependencia) e é sempre filtrado pelas preferências de acessibilidade em EfeitoGlitch.disparar.
+func aplicar_feedback_dependencia(dependencia: int, contexto: StringName = &"") -> void:
+	var d: int = clampi(dependencia, 0, 100)
+	if d != _dependencia_aplicada:
+		_dependencia_aplicada = d
+		TemaNexus.definir_dependencia(d)
+		TemaNexus.aplicar(get_tree())
+		_fundo.atualizar()
+		GerenciadorJanelas.atualizar_temas()
+		_atualizar_shell()
+		_efeito.atualizar_base()
+		feedback_dependencia_aplicado.emit(FeedbackDependencia.faixa(d))
+	var agora: int = Time.get_ticks_msec()
+	if _pronto and FeedbackDependencia.glitch_condicional(d, contexto) and agora - _ultimo_glitch_dependencia_ms > 1000:
+		_ultimo_glitch_dependencia_ms = agora   # revogar dispara dois sinais seguidos: um glitch só
+		var par: Dictionary = FeedbackDependencia.parametros_glitch(d, float(GerenciadorConfiguracoes.obter("intensidade_glitch")))
+		if float(par["intensidade"]) > 0.0:
+			_efeito.disparar(float(par["intensidade"]), float(par["duracao"]), true)
+
+
+func dependencia_aplicada() -> int:
+	return _dependencia_aplicada
+
+
+func _ao_dependencia_alterada(valor: int, motivo: StringName) -> void:
+	aplicar_feedback_dependencia(valor, motivo)
+
+
+## Conceder/revogar permissão: o valor de D já chegou por `dependencia_alterada`; aqui só se avalia o contexto de controle.
+func _ao_permissao_feedback(_nome: String, ativa: bool) -> void:
+	aplicar_feedback_dependencia(GerenciadorEstado.dependencia_maya(), &"permissao_concedida" if ativa else &"permissao_revogada")
 
 
 func _ao_glitch(intensidade: float, duracao: float) -> void:

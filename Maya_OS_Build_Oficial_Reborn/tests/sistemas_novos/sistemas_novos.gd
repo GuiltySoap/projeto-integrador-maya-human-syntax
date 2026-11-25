@@ -1,5 +1,5 @@
 extends Node
-## Suíte do ROTEIRO v2.0 (estado D/A, permissões e revogação, progressão pelas 9 Tasks, rotas alternativas, AV e seis finais, minigames de lógica,
+## Suíte do ROTEIRO v2.0 + v2.1 (estado D/A, permissões e revogação, progressão pelas 9 Tasks, rotas alternativas, AV e seis finais, minigames de lógica,
 ## interfaces e marca). Cada módulo (tests/sistemas_novos/modulo_*.gd) começa de um jogo novo e mede o sistema de verdade, com os dados e as cenas
 ## reais do jogo; este executor só os roda em sequência, soma o resultado e protege o jogador:
 ##   - o salvamento e as preferências reais (user://nexus_os/) nunca são lidos nem gravados durante a suíte (os valores originais voltam no fim);
@@ -15,12 +15,17 @@ extends Node
 
 const SAIDA := "res://tests/_saida/sistemas_novos/"
 const MODULOS: Array = [
+	["O jogo inteiro compila: todos os scripts, cenas e JSON de dados carregam", "res://tests/sistemas_novos/modulo_compilacao.gd"],
 	["Estado, permissões, revogação, persistência e migração (v2.0)", "res://tests/sistemas_novos/modulo_estado_v2.gd"],
 	["Progressão das 9 Tasks, rotas alternativas, AV e seis finais (v2.0)", "res://tests/sistemas_novos/modulo_progressao_v2.gd"],
 	["Minigames de lógica e montagem da rotina (v2.0)", "res://tests/sistemas_novos/modulo_minigames_v2.gd"],
 	["Interfaces: cartões, Mensageiro, Terminal, Configurações, relatórios e Mural (v2.0)", "res://tests/sistemas_novos/modulo_interfaces_v2.gd"],
 	["Área de trabalho de verdade: janelas pedidas pelo roteiro (v2.0)", "res://tests/sistemas_novos/modulo_desktop_v2.gd"],
 	["Marca visual", "res://tests/sistemas_novos/modulo_marca.gd"],
+	["Alinhamento com o roteiro v2.1 (pesos, re-concessão, janela de investigação, arquivos, ponte com o C)", "res://tests/sistemas_novos/modulo_v21.gd"],
+	["Caixa de entrada visual, wallpapers, feedback da Dependência, painel da Maya e trilhas dinâmicas", "res://tests/sistemas_novos/modulo_ux_v22.gd"],
+	["Avatar da Maya: mesmo componente e mesmo 'M' no Novo Jogo e no painel, cor pela Dependência e acessibilidade", "res://tests/sistemas_novos/modulo_avatar_maya.gd"],
+	["Painel da Maya: layout com os 4 botões do topo, rolagem lateral e nada cortado em 420, 560 e 900 px", "res://tests/sistemas_novos/modulo_painel_maya_layout.gd"],
 ]
 
 

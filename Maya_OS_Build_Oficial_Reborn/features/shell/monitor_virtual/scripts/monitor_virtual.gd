@@ -53,7 +53,15 @@ const TEXTO_AVISO := "Clique na tela ou pressione F8 para usar o computador"
 ## Clicar fora da tela do monitor, com o foco no desktop, devolve o foco ao mundo físico (a CenaGameplay desliga isto: sem mundo físico para
 ## explorar, um clique perdido na parede não pode tirar o jogador do computador; o F8 continua alternando).
 @export var clique_fora_devolve_o_foco: bool = true
-## Textura do fundo físico (opcional). Vazio: um degradê escuro de placeholder.
+## Mostra o rodapé de foco ("Foco: computador — F8..."). A CenaGameplay desliga isto enquanto o foco está no desktop para não confundir o jogador.
+@export var mostrar_indicador_foco: bool = true
+## Mantém o cenário físico atrás do monitor claro e nítido (usado na CenaGameplay para exibir a parede clara e prateleiras).
+@export var cenario_nitido: bool = false
+## Ajusta dinamicamente o tamanho da moldura para casar exatamente com o aspecto do desktop (evita barras pretas em telas 16:10 ou 16:9).
+@export var ajustar_moldura_ao_aspecto: bool = false
+## Resolução virtual inicial do desktop dentro do monitor (1600x900 na CenaGameplay equilibra nitidez e tamanho dos ícones).
+@export var resolucao_inicial: Vector2i = RESOLUCAO_PADRAO
+## Textura do fundo físico (opcional). Vazio: um degradê claro de placeholder.
 @export var textura_fundo: Texture2D
 
 var _foco: Foco = Foco.FISICO
@@ -106,13 +114,17 @@ func _ready() -> void:
 	add_to_group(GRUPO)
 	_container.stretch = false
 	_container.pivot_offset = Vector2.ZERO
+	if resolucao_valida(resolucao_inicial):
+		_resolucao = resolucao_inicial
 	_fundo.texture = textura_fundo if textura_fundo != null else _criar_fundo_placeholder()
 	_viewport.gui_disable_input = true
 	_viewport.size = _resolucao
+	resized.connect(_ajustar_layout_moldura)
 	_area_tela.resized.connect(_ajustar)
 	GerenciadorConfiguracoes.configuracao_alterada.connect(_ao_configuracao_alterada)
 	GerenciadorJanelas.definir_conversor_de_ponto(converter_ponto)
 	_montar_desktop()
+	_ajustar_layout_moldura()
 	_ajustar()
 	_aplicar_acessibilidade()
 	_definir_foco(Foco.DESKTOP if iniciar_no_desktop else Foco.FISICO)
@@ -121,6 +133,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if not _pronta:
 		return
+	if resized.is_connected(_ajustar_layout_moldura):
+		resized.disconnect(_ajustar_layout_moldura)
 	if _area_tela.resized.is_connected(_ajustar):
 		_area_tela.resized.disconnect(_ajustar)
 	if GerenciadorConfiguracoes.configuracao_alterada.is_connected(_ao_configuracao_alterada):
@@ -155,8 +169,8 @@ func viewport_do_desktop() -> SubViewport:
 
 func _criar_fundo_placeholder() -> Texture2D:
 	var gradiente := Gradient.new()
-	gradiente.set_color(0, Color(0.80, 0.81, 0.84))   # parede neutra, clara no centro e mais escura nas bordas
-	gradiente.set_color(1, Color(0.46, 0.47, 0.52))
+	gradiente.set_color(0, Color(0.95, 0.94, 0.91))   # parede clara e suave atrás do monitor
+	gradiente.set_color(1, Color(0.82, 0.80, 0.76))
 	var textura := GradientTexture2D.new()
 	textura.gradient = gradiente
 	textura.fill = GradientTexture2D.FILL_RADIAL
@@ -179,9 +193,67 @@ func definir_resolucao(nova: Vector2i) -> bool:
 	_resolucao = nova
 	if _pronta:
 		_viewport.size = nova
+		_ajustar_layout_moldura()
 		_ajustar()
 	resolucao_alterada.emit(nova)
 	return true
+
+
+## Ajusta a moldura e a base do monitor ao aspecto exato do desktop (ex.: 16:9 em tela 16:10 ou 16:9), maximizando a área útil sem faixas pretas.
+func _ajustar_layout_moldura() -> void:
+	if not _pronta or not ajustar_moldura_ao_aspecto:
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	var margem_h: float = 10.0
+	var margem_v: float = 10.0
+	var margem_node := _moldura.get_node_or_null("Margem") as MarginContainer
+	if margem_node != null:
+		margem_h = float(margem_node.get_theme_constant("margin_left") + margem_node.get_theme_constant("margin_right"))
+		margem_v = float(margem_node.get_theme_constant("margin_top") + margem_node.get_theme_constant("margin_bottom"))
+	var sb_moldura: StyleBox = _moldura.get_theme_stylebox("panel")
+	if sb_moldura != null:
+		var sb_min: Vector2 = sb_moldura.get_minimum_size()
+		margem_h += sb_min.x
+		margem_v += sb_min.y
+	var borda_lat: float = size.x * 0.055
+	var topo_min: float = size.y * 0.018
+	var base_y: float = size.y * 0.935
+	var alt_base: float = clampf(size.y * 0.018, 10.0, 16.0)
+	var alt_pe_min: float = clampf(size.y * 0.040, 22.0, 42.0)
+	var max_w: float = maxf(240.0, size.x - borda_lat * 2.0)
+	var max_h: float = maxf(160.0, base_y - alt_base - alt_pe_min - topo_min)
+	var ajuste := encaixar(_resolucao, Vector2(maxf(64.0, max_w - margem_h), maxf(64.0, max_h - margem_v)))
+	var escala: float = float(ajuste["escala"])
+	var mold_w: float = roundf(float(_resolucao.x) * escala) + margem_h
+	var mold_h: float = roundf(float(_resolucao.y) * escala) + margem_v
+	var mold_x: float = roundf((size.x - mold_w) * 0.5)
+	var topo_ideal: float = base_y - alt_base - alt_pe_min - mold_h
+	var mold_y: float = roundf(maxf(topo_min, (topo_ideal + topo_min) * 0.5))
+	_posicionar_exato(_moldura, Vector2(mold_x, mold_y), Vector2(mold_w, mold_h))
+	var base_top: float = roundf(base_y - alt_base)
+	var pe_top: float = roundf(mold_y + mold_h)
+	var pe_alt: float = maxf(8.0, base_top - pe_top)
+	var pe_larg: float = clampf(size.x * 0.052, 48.0, 84.0)
+	var base_larg: float = clampf(size.x * 0.19, 180.0, 300.0)
+	var pe := get_node_or_null("%PeMonitor") as Control
+	if pe != null:
+		_posicionar_exato(pe, Vector2(roundf((size.x - pe_larg) * 0.5), pe_top), Vector2(pe_larg, pe_alt))
+	var base := get_node_or_null("%BaseMonitor") as Control
+	if base != null:
+		_posicionar_exato(base, Vector2(roundf((size.x - base_larg) * 0.5), base_top), Vector2(base_larg, alt_base))
+	_ajustar.call_deferred()
+
+
+func _posicionar_exato(ctrl: Control, pos: Vector2, tam: Vector2) -> void:
+	ctrl.anchor_left = 0.0
+	ctrl.anchor_top = 0.0
+	ctrl.anchor_right = 0.0
+	ctrl.anchor_bottom = 0.0
+	ctrl.offset_left = pos.x
+	ctrl.offset_top = pos.y
+	ctrl.offset_right = pos.x + tam.x
+	ctrl.offset_bottom = pos.y + tam.y
 
 
 ## Encaixa o desktop na tela do monitor: escala sem distorcer e centraliza (as bordas que sobrarem ficam pretas).
@@ -251,6 +323,7 @@ func _definir_foco(novo: Foco) -> void:
 	_aviso.visible = not no_desktop
 	_aviso.text = TEXTO_AVISO
 	_indicador.text = TEXTO_FOCO_DESKTOP if no_desktop else TEXTO_FOCO_FISICO
+	_indicador.visible = mostrar_indicador_foco or not no_desktop
 	_atualizar_moldura()
 	if mudou:
 		foco_alterado.emit(int(_foco))
@@ -371,6 +444,9 @@ func _aplicar_acessibilidade() -> void:
 	if alto_contraste():
 		material_desfoque.set_shader_parameter("raio", 0.0)
 		material_desfoque.set_shader_parameter("escurecer", ESCURECER_ALTO_CONTRASTE)
+	elif cenario_nitido:
+		material_desfoque.set_shader_parameter("raio", 0.35)
+		material_desfoque.set_shader_parameter("escurecer", ESCURECER_CONFORTO if sem_animacoes() else 0.04)
 	else:
 		material_desfoque.set_shader_parameter("raio", RAIO_DESFOQUE)
 		material_desfoque.set_shader_parameter("escurecer", ESCURECER_CONFORTO if sem_animacoes() else ESCURECER_PADRAO)

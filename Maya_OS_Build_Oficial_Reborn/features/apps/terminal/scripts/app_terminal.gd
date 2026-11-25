@@ -11,7 +11,7 @@ extends AppBase
 ## (`text_submitted`, `gui_input`) estão ligados na própria cena. O único conteúdo dinâmico é o texto da saída (RichTextLabel).
 
 const MAX_LINHAS := 400
-const COMANDOS: Array = ["help", "ajuda", "ls", "cd", "pwd", "cat", "tree", "whoami", "clear", "echo", "history", "open", "edit", "listar", "revogar", "exit"]
+const COMANDOS: Array = ["help", "ajuda", "ls", "cd", "pwd", "cat", "tree", "whoami", "clear", "echo", "history", "open", "edit", "listar", "revogar", "conquistas", "exit"]
 ## Quantos argumentos (e de que tamanho) o evento `comando_executado` guarda.
 const MAX_ARGUMENTOS_NO_EVENTO := 8
 const MAX_TAMANHO_ARGUMENTO := 80
@@ -247,6 +247,7 @@ func _emitir_comando(cmd: String, args: PackedStringArray, ok: bool) -> void:
 func _despachar(cmd: String, args: PackedStringArray) -> void:
 	if COMANDOS_BLOQUEADOS.has(cmd):
 		_falhou = true
+		SistemaConquistas.desbloquear("tentativa_root")
 		_escrever("[color=%s]'%s' está desativado na simulação: este terminal não altera nada fora do jogo. Use o Explorador (Excluir move para a Lixeira).[/color]" % [COR_AVISO, UtilTexto.escapar_bbcode(cmd)])
 		return
 	match cmd:
@@ -275,6 +276,8 @@ func _despachar(cmd: String, args: PackedStringArray) -> void:
 			_cmd_listar(args)
 		"revogar":
 			_cmd_revogar(args)
+		"conquistas":
+			_cmd_conquistas()
 		"mkdir", "touch":
 			_cmd_criar(cmd, args)
 		"open", "edit":
@@ -298,10 +301,28 @@ func _cmd_ajuda() -> void:
 		["mkdir <nome> / touch <nome>", "cria pasta / arquivo vazio"],
 		["listar permissoes", "mostra as cinco permissões da Maya e o estado de cada uma"],
 		["revogar <id ou número>", "revoga uma permissão ativa (o mesmo que desmarcar em Configurações > Privacidade)"],
+		["conquistas", "mostra suas conquistas desbloqueadas no jogo"],
 		["exit", "fecha o terminal"],
 	]
 	for item in itens:
 		_escrever("  [color=%s]%-38s[/color] %s" % [COR_ACENTO, str(item[0]), str(item[1])])
+
+
+func _cmd_conquistas() -> void:
+	var feitas: int = SistemaConquistas.contagem()
+	var tot: int = SistemaConquistas.total()
+	_escrever("[b]Conquistas (%d/%d)[/b]" % [feitas, tot])
+	for item in SistemaConquistas.catalogo():
+		var d: Dictionary = item
+		var id_c: String = str(d["id"])
+		var ok: bool = SistemaConquistas.esta_desbloqueada(id_c)
+		var secreta: bool = bool(d.get("secreta", false))
+		if ok:
+			_escrever("  [color=%s][OK][/color] %s [b]%s[/b] — %s" % [COR_OK, str(d["icone"]), UtilTexto.escapar_bbcode(str(d["titulo"])), UtilTexto.escapar_bbcode(str(d["descricao"]))])
+		elif secreta:
+			_escrever("  [color=%s][--][/color] ??? — Conquista secreta" % COR_FRACA)
+		else:
+			_escrever("  [color=%s][--][/color] %s — %s" % [COR_FRACA, UtilTexto.escapar_bbcode(str(d["titulo"])), UtilTexto.escapar_bbcode(str(d["descricao"]))])
 
 
 ## `listar permissoes`: a lista numerada das cinco permissões com o estado real de cada uma.

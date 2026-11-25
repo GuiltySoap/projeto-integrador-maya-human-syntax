@@ -68,6 +68,7 @@ func iniciar_novo_jogo(nome: String, pronome: String = "") -> void:
 	FluxoRoteiro.garantir()
 	if GerenciadorNos.pronto:
 		GerenciadorNos.reiniciar()
+	SistemaConquistas.iniciar_sessao()
 	jogo_ativo = true
 	_ir(FluxoRoteiro.NO_INICIAL)
 
@@ -141,7 +142,12 @@ func apresentacao() -> Dictionary:
 		"escolha", "espera":
 			saida["opcoes"] = _opcoes_para_interface(def)
 			if str(def.get("tipo", "")) == "espera":
-				saida["espera"] = str(def.get("evento", ""))
+				var espera_no := str(def.get("evento", ""))
+				if espera_no == "" and def.get("saidas") is Array and not (def["saidas"] as Array).is_empty():
+					var primeira: Variant = (def["saidas"] as Array)[0]
+					if primeira is Dictionary:
+						espera_no = str((primeira as Dictionary).get("evento", ""))
+				saida["espera"] = espera_no
 		"janela":
 			saida["espera"] = str(def.get("espera", ""))
 			saida["app"] = str(def.get("app", ""))
@@ -163,7 +169,7 @@ func _opcoes_para_interface(def: Dictionary) -> Array:
 		var od: Dictionary = o
 		if od.has("removida_se") and GerenciadorEstado.avaliar_condicao(od["removida_se"]):
 			continue
-		saida.append({"id": str(od["id"]), "texto": str(od["texto"])})
+		saida.append({"id": str(od["id"]), "texto": FluxoRoteiro.texto(str(od["texto"]))})
 	return saida
 
 
@@ -175,6 +181,22 @@ func opcoes_removidas() -> Array:
 		for o in def["opcoes"]:
 			if o is Dictionary and (o as Dictionary).has("removida_se") and GerenciadorEstado.avaliar_condicao((o as Dictionary)["removida_se"]):
 				saida.append(str((o as Dictionary).get("rotulo_removida", "Opção removida pela Maya")))
+	return saida
+
+
+## Opções bloqueadas pela Maya (v2.1 T9.6): devolve {id, texto, rotulo_removida} para o botão aparecer visível mas com clique interceptado.
+func opcoes_bloqueadas() -> Array:
+	var saida: Array = []
+	var def := no_atual()
+	if def.get("opcoes") is Array:
+		for o in def["opcoes"]:
+			if o is Dictionary and (o as Dictionary).has("removida_se") and GerenciadorEstado.avaliar_condicao((o as Dictionary)["removida_se"]):
+				var od: Dictionary = o
+				saida.append({
+					"id": str(od.get("id", "")),
+					"texto": FluxoRoteiro.texto(str(od.get("texto", ""))),
+					"rotulo_removida": str(od.get("rotulo_removida", "Opção bloqueada pela Maya")),
+				})
 	return saida
 
 
@@ -278,6 +300,9 @@ func escolher_opcao(id_opcao: String) -> bool:
 	if destino == "":
 		destino = str(escolhida.get("proximo", ""))
 	_ir(destino)
+	# Ponte opcional com o backend em C: grava o estado DEPOIS da escolha (D, A, permissões, flags e, em T9.6, o final já avaliado).
+	if EstadoJogoBackend.ativo():
+		EstadoJogoBackend.registrar_escolha_v21(str(escolhida.get("id_backend", "")))
 	return true
 
 
@@ -452,16 +477,29 @@ func notificar(evento: String, dados: Dictionary = {}) -> void:
 	var def := no_atual()
 	match str(def.get("tipo", "")):
 		"espera":
-			if str(def.get("evento", "")) == evento or (str(def.get("evento", "")) == "retorno_desktop" and evento.begins_with("janela_fechada:") and _retorno_desktop()):
+			var esperado := str(def.get("evento", ""))
+			if _evento_corresponde(esperado, evento):
 				_sair_da_espera(def)
 			elif def.get("saidas") is Array:
 				for s in def["saidas"]:
-					if s is Dictionary and str((s as Dictionary).get("evento", "")) == evento:
+					if s is Dictionary and _evento_corresponde(str((s as Dictionary).get("evento", "")), evento):
 						_ir(str((s as Dictionary).get("ir", "")))
 						return
 		"janela":
-			if str(def.get("espera", "")) == evento:
+			if _evento_corresponde(str(def.get("espera", "")), evento):
 				_ir(str(def.get("proximo", "")))
+
+
+func _evento_corresponde(esperado: String, recebido: String) -> bool:
+	if esperado == "" or recebido == "":
+		return false
+	if esperado == recebido:
+		return true
+	if esperado == "retorno_desktop" and recebido.begins_with("janela_fechada:") and _retorno_desktop():
+		return true
+	if esperado == "abriu_mensageiro" and (recebido == "app_aberto:messenger" or recebido == "app_aberto:mensageiro"):
+		return true
+	return false
 
 
 func _sair_da_espera(def: Dictionary) -> void:
@@ -563,6 +601,7 @@ func mostrar_mensagem_oculta(contato: String, id_msg: String) -> bool:
 	entrada["texto"] = str(entrada.get("texto_oculto", entrada.get("texto", "")))
 	GerenciadorEstado.registrar_resistencia(StringName("mostrar_mensagem:" + id_msg))
 	GerenciadorEstado.notificar_mensagem_atualizada(contato, id_msg)
+	SistemaConquistas.desbloquear("ver_mensagem_oculta")
 	mensagem_revelada.emit(contato, id_msg)
 	return true
 
@@ -612,15 +651,53 @@ func avaliar_final() -> String:
 		return "rafael_1"
 	if d >= 65 and a <= 2 and Permissoes.valor("permissao_gerenciamento_apps") and Permissoes.valor("permissao_gerenciamento_mensageiro"):
 		return "aceitacao_total"
-	if d <= 35 and a >= 3 and GerenciadorEstado.permissoes_ativas() == 0:
+	if d <= 35 and a >= 3 and GerenciadorEstado.permissoes_ativas() <= 1 and not Permissoes.valor("permissao_gerenciamento_mensageiro"):
 		return "recusa_total"
 	if not Permissoes.valor("permissao_gerenciamento_mensageiro"):
 		return "meio_termo_1"
 	return "meio_termo_2"
 
 
+# ------------------------------------------------------------------ janela de investigação (v2.1)
+## Destino especial dos nós da Task 5: volta ao nó de onde o jogador abriu o histórico antigo (T4.F, ou um nó da conversa da Task 6).
+const RETORNO_T5 := FluxoRoteiro.DESTINO_RETORNO_T5
+
+
+## v2.1: a janela de investigação vai do fim da Task 4 até o jogador concluir a conversa com a Bia (T6.8). Durante a conversa da Task 6 o histórico
+## antigo continua acessível pelo painel da Maya. (Em T4.F ele já aparece como opção do próprio nó.) Só enquanto o nó espera o jogador.
+func historico_antigo_extra_disponivel() -> bool:
+	if not jogo_ativo:
+		return false
+	var id_no := GerenciadorEstado.no_roteiro
+	if not id_no.begins_with("T6.") or id_no == "T6.8":
+		return false
+	if not (str(no_atual().get("tipo", "")) in ["escolha", "espera"]):
+		return false
+	return GerenciadorEstado.tem_flag("sincronizacao_concluida") and not GerenciadorEstado.tem_flag("rafael_arquivada") \
+		and not GerenciadorEstado.tem_flag("task_5_realizada")
+
+
+## Abre o histórico antigo (T5.1) a partir da conversa da Task 6, guardando o nó para voltar exatamente a ele. Devolve false se não vale agora.
+func abrir_historico_antigo() -> bool:
+	if not historico_antigo_extra_disponivel():
+		return false
+	GerenciadorEstado.roteiro_aux["retorno_t5"] = GerenciadorEstado.no_roteiro
+	_ir("T5.1")
+	return true
+
+
 # ------------------------------------------------------------------ execução dos nós
 func _ir(id_no: String) -> void:
+	if id_no == RETORNO_T5:
+		var volta := str(GerenciadorEstado.roteiro_aux.get("retorno_t5", "T4.F"))
+		GerenciadorEstado.roteiro_aux.erase("retorno_t5")
+		if volta != "T4.F" and not _em_cadeia and FluxoRoteiro.existe(volta):
+			# Volta a um nó da conversa da Task 6 SEM repetir as falas dele: só redesenha o que ele espera do jogador.
+			GerenciadorEstado.definir_no_roteiro(volta)
+			no_entrou.emit(volta)
+			_reapresentar(volta)
+			return
+		id_no = "T4.F"
 	if _em_cadeia:
 		# Efeito que pede outro nó durante a cadeia: o laço atual assume o destino.
 		_proximo_da_cadeia = id_no
@@ -693,13 +770,25 @@ func _concluir_cartoes_vazios(def: Dictionary) -> String:
 	return str(def.get("proximo", ""))
 
 
-## Chamado quando a cadeia para em um nó que espera o jogador: marca o ponto de salvamento da Task e avisa a interface.
+## Chamado quando a cadeia para em um nó que espera o jogador: marca o ponto de salvamento da Task, atualiza o tom da IA e avisa a interface.
 func _ao_parar() -> void:
 	var etapa := GerenciadorEstado.etapa_atual
+	_atualizar_estado_ia(etapa)
 	if etapa != _etapa_anunciada:
 		_etapa_anunciada = etapa
 		etapa_iniciada.emit(etapa)
 	apresentacao_mudou.emit()
+
+
+func _atualizar_estado_ia(etapa: int) -> void:
+	var novo := "amigavel"
+	if etapa >= 9:
+		novo = "isolando"
+	elif etapa >= 7:
+		novo = "revelada"
+	elif etapa >= 4:
+		novo = "controladora"
+	GerenciadorEstado.definir_ia_estado(novo)
 
 
 ## Volta a um nó salvo SEM repetir os efeitos de entrada (já estão no estado salvo); só refaz o que é de tempo de execução.

@@ -46,6 +46,7 @@ const DEPENDENCIA_INICIAL := 50
 const AUTONOMIA_INICIAL := 0
 const TASK_INICIAL := "task_1"
 const ORIGEM_RESTAURAR := "restaurar"
+const ORIGEM_REVERSAO := "reversao_permissao"   # v2.1: religar uma permissão revogada desfaz exatamente o A +1 da revogação
 const TASKS: PackedStringArray = ["task_1", "task_2", "task_3", "task_4", "task_5", "task_6", "tr_1", "task_7", "task_8", "task_9", "av"]
 ## Textos que mudaram no rebranding (NEXUS -> Maya / HumaxOS). Servem só para atualizar saves da versão 1, gravados antes do
 ## rebranding (ver SistemaPersistencia.VERSAO). A ordem importa: as expressões mais longas vêm antes das mais curtas.
@@ -421,6 +422,18 @@ func ato_registrado(id_ato: StringName) -> bool:
 	return atos_de_resistencia.has(str(id_ato))
 
 
+## Desfaz EXATAMENTE um ato de resistência (A −1) e libera o id para pontuar de novo. Única exceção à regra "A nunca diminui" (v2.1: religar uma
+## permissão revogada). Devolve true se o ato existia.
+func desfazer_resistencia(id_ato: StringName) -> bool:
+	var id_texto := str(id_ato)
+	if not atos_de_resistencia.has(id_texto):
+		return false
+	atos_de_resistencia.erase(id_texto)
+	definir_metrica(Metricas.AUTONOMIA, maxi(0, autonomia_jogador() - 1), ORIGEM_REVERSAO)
+	autonomia_alterada.emit(autonomia_jogador(), id_ato)
+	return true
+
+
 ## Quantas das cinco permissões estão ativas (0 a 5).
 func permissoes_ativas() -> int:
 	var n: int = 0
@@ -535,7 +548,7 @@ func definir_metrica(nome: String, valor: Variant, origem: String = "") -> bool:
 	var antes := obter_metrica(canonico)
 	var depois := float(r["valor"])
 	# REGRA DO ROTEIRO v2.0: a Autonomia é um contador que NUNCA diminui (só `restaurar_metricas`, no novo jogo, volta ao início).
-	if canonico == Metricas.AUTONOMIA and depois < antes and origem != ORIGEM_RESTAURAR:
+	if canonico == Metricas.AUTONOMIA and depois < antes and origem != ORIGEM_RESTAURAR and origem != ORIGEM_REVERSAO:
 		push_warning("GerenciadorEstado: a autonomia nunca diminui (pedido recusado, origem '%s')." % origem)
 		return false
 	metricas[canonico] = depois

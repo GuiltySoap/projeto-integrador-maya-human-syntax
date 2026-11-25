@@ -103,13 +103,34 @@ static func nome_seguro(entrada: Variant) -> String:
 	return str(validar_nome(entrada)["nome"])
 
 
-## Contexto de tags para `processar_texto`: as quatro tags do perfil (nas duas grafias, maiúscula e a chave curta).
+## Inferência de desinência de gênero ("a" ou "o") para textos com `{o/a}` (regra v2.1).
+## Respeita pronome explícito ("ela" -> "a", "ele" -> "o"); no neutro, infere pelo nome (ex.: "Erika", "Ana" -> "a").
+static func desinencia_genero(nome: Variant, pronome: Variant) -> String:
+	var id_pronome := validar_pronome(pronome)
+	if id_pronome == "ela":
+		return "a"
+	if id_pronome == "ele":
+		return "o"
+	var limpo := nome_seguro(nome).strip_edges().to_lower()
+	if limpo == "" or limpo == NOME_PADRAO.to_lower():
+		return "o"
+	var primeiro: String = limpo.split(" ")[0]
+	var excecoes_masc: PackedStringArray = ["luca", "joshua", "nikita", "mika", "akira", "borja", "guga", "duda"]
+	var comuns_fem: PackedStringArray = ["beatriz", "ingrid", "raquel", "ester", "esther", "iris", "alice", "clarice", "denise", "eliane", "evelyn", "isabel", "liz", "nicole", "simone", "yasmin"]
+	if comuns_fem.has(primeiro):
+		return "a"
+	if primeiro.ends_with("a") and not excecoes_masc.has(primeiro):
+		return "a"
+	return "o"
+
+
+## Contexto de tags para `processar_texto`: as quatro tags do perfil (nas duas grafias, maiúscula e a chave curta) mais `{o/a}`.
 static func contexto(nome: Variant, pronome: Variant) -> Dictionary:
 	var dados := dados_do_pronome(pronome)
 	var nome_ok := nome_seguro(nome)
 	return {
 		"NOME_JOGADOR": nome_ok, "PRONOME_JOGADOR": str(dados["pronome"]), "ARTIGO_JOGADOR": str(dados["artigo"]),
-		"PRONOME_POSSESSIVO": str(dados["possessivo"]), "nome": nome_ok,
+		"PRONOME_POSSESSIVO": str(dados["possessivo"]), "nome": nome_ok, "o/a": desinencia_genero(nome_ok, pronome),
 	}
 
 
@@ -160,6 +181,8 @@ static func tags_presentes(texto: String) -> PackedStringArray:
 
 
 static func _eh_nome_de_tag(chave: String) -> bool:
+	if chave == "o/a":
+		return true
 	for i in chave.length():
 		var codigo := chave.unicode_at(i)
 		var letra := (codigo >= 65 and codigo <= 90) or (codigo >= 97 and codigo <= 122)

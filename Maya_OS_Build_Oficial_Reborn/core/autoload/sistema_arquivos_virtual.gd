@@ -531,7 +531,13 @@ func ao_abrir(caminho: String) -> Dictionary:
 	var no: Dictionary = _nos[c]
 	var saida: Dictionary = {}
 	if str(no.get("abre_minigame", "")) != "" and not GerenciadorEstado.tem_flag(str(no.get("flag_minigame_resolvido", ""))):
-		saida["minigame"] = str(no["abre_minigame"])
+		var id_mg := str(no["abre_minigame"])
+		# v2.1: o Minigame #2 fica disponível até o ENCERRAMENTO da cena T9.5R; a Maya o bloqueia ao entrar em T9.6 (flag rafael_fechada_pela_maya).
+		var bloqueada_t9: bool = id_mg == "trava_rafael" and (GerenciadorEstado.tem_flag("rafael_fechada_pela_maya") or GerenciadorEstado.no_roteiro in ["T9.6", "AV"])
+		if bloqueada_t9:
+			SistemaNotificacoes.notificar("Maya", "Acesso à trava de Rafael bloqueado pela Maya.", "aviso", 5.0)
+		else:
+			saida["minigame"] = id_mg
 	var chave_unica := "aberto:" + str(no.get("id", c))
 	if no.get("ao_abrir") is Array and not GerenciadorEstado.tem_flag(chave_unica):
 		GerenciadorEstado.set_flag(chave_unica, true)

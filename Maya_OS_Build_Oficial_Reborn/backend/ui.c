@@ -10,7 +10,12 @@
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
+#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR) /* MinGW.org: _fileno escondido com -std=c11 (ver bk_common.c) */
+int fileno(FILE *stream);
+#define BK_ISATTY(f) _isatty(fileno(f))
+#else
 #define BK_ISATTY(f) _isatty(_fileno(f))
+#endif
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
@@ -43,7 +48,10 @@ bool ui_ler_linha(char *buf, size_t cap) {
     }
     size_t n = strlen(buf);
     if (n > 0 && buf[n - 1] == '\n') {
-        buf[n - 1] = '\0';
+        buf[--n] = '\0';
+        if (n > 0 && buf[n - 1] == '\r') {
+            buf[--n] = '\0';
+        }
         return true;
     }
     /* Linha maior que o buffer: descarta o resto até a quebra de linha (ou EOF). */
@@ -95,7 +103,7 @@ bk_status ui_ler_inteiro(int min, int max, int *out) {
     return BK_OK;
 }
 
-bk_status executar_turno(GameState *jogo, const Turn *turno) {
+bk_status executar_turno_com_escolha(GameState *jogo, const Turn *turno, int *escolha_id_out) {
     if (jogo == NULL || turno == NULL) {
         return BK_ERR_ARG;
     }
@@ -106,6 +114,9 @@ bk_status executar_turno(GameState *jogo, const Turn *turno) {
         }
     }
     if (turno->choice_count <= 0) {
+        if (escolha_id_out != NULL) {
+            *escolha_id_out = 0;
+        }
         return BK_OK;
     }
     for (;;) {
@@ -147,6 +158,13 @@ bk_status executar_turno(GameState *jogo, const Turn *turno) {
         if (!esperar_enter()) {
             return BK_ERR_IO;
         }
+        if (escolha_id_out != NULL) {
+            *escolha_id_out = escolhida->id;
+        }
         return BK_OK;
     }
+}
+
+bk_status executar_turno(GameState *jogo, const Turn *turno) {
+    return executar_turno_com_escolha(jogo, turno, NULL);
 }

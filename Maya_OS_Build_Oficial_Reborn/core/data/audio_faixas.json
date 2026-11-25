@@ -1,0 +1,29 @@
+{
+ "versao": 1,
+ "comentario": "Catálogo de trilhas dinâmicas (clímax e epílogos). 'arquivo' é o nome SEM extensão em res://shared/assets/audio/ (.ogg, .wav ou .mp3). Arquivo ausente cai em 'fallback' (outro id deste catálogo); sem fallback, a trilha atual continua. volume_db é somado ao volume base da música; o volume do jogador (Geral/Música) vale sempre por cima, nos barramentos.",
+ "faixa_padrao": "default",
+ "fade_padrao_s": 1.6,
+ "faixas": [
+  {"id": "default", "arquivo": "bgm_dia_5", "volume_db": 0.0, "loop": true, "bus": "BGM", "fallback": ""},
+  {"id": "climax", "arquivo": "bgm_climax", "volume_db": 0.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.2},
+  {"id": "final_acceptance", "arquivo": "bgm_final_aceitacao", "volume_db": -2.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.5},
+  {"id": "final_autonomy", "arquivo": "bgm_final_autonomia", "volume_db": -2.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.5},
+  {"id": "final_middle_01", "arquivo": "bgm_final_meio_01", "volume_db": -2.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.5},
+  {"id": "final_middle_02", "arquivo": "bgm_final_meio_02", "volume_db": -2.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.5},
+  {"id": "final_rafael_01", "arquivo": "bgm_final_rafael_01", "volume_db": -2.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.5},
+  {"id": "final_rafael_02", "arquivo": "bgm_final_rafael_02", "volume_db": -2.0, "loop": true, "bus": "BGM", "fallback": "default", "fade_s": 2.5}
+ ],
+ "eventos": {
+  "climax_started": "climax",
+  "task_9_started": "climax",
+  "maya_control_escalated": "climax"
+ },
+ "finais": {
+  "aceitacao_total": "final_acceptance",
+  "recusa_total": "final_autonomy",
+  "meio_termo_1": "final_middle_01",
+  "meio_termo_2": "final_middle_02",
+  "rafael_1": "final_rafael_01",
+  "rafael_2": "final_rafael_02"
+ }
+}

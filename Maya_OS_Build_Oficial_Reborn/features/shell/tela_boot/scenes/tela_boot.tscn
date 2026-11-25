@@ -267,6 +267,7 @@ layout_mode = 2
 custom_minimum_size = Vector2(150, 150)
 size_flags_horizontal = 4
 unique_name_in_owner = true
+usar_marca = true
 
 [node name="RotuloNexus" type="Label" parent="Saudacao/Centro/Coluna"]
 layout_mode = 2

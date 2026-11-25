@@ -127,7 +127,7 @@ func _atualizar_notificacoes() -> void:
 
 func _atualizar_relogio() -> void:
 	_rot_hora.text = RelogioGlobal.hora_texto()
-	_rot_data.text = ""   # sem calendário no jogo
+	_rot_data.text = ""
 	_rot_data.visible = false
 
 

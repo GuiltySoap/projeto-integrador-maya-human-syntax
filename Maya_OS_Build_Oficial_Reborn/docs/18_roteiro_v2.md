@@ -1,6 +1,6 @@
-# 18. Roteiro MAYA v2.0: implementação, validação e divergências
+# 18. Roteiro MAYA v2.0 / v2.1: implementação, validação e divergências
 
-Fonte de verdade: `MAYA_Roteiro_Revisado_v2.0.pdf`. Este documento **substitui** o escopo dos docs 16 e 17 (modelo de dias, e-mail, calendário,
+Fonte de verdade: `MAYA - Roteiro Revisado versão 2.1.pdf` (a v2.0 está implementada e validada; a v2.1 está na seção 18.7). Este documento **substitui** o escopo dos docs 16 e 17 (modelo de dias, e-mail, calendário,
 navegador, monitor de sistema, falso boot, terror condicional e `apt-get`), que deixaram de existir no jogo.
 Regra de nomes: o jogo é **Maya Human Syntax** (IA: Maya; sistema: HumaxOS). Identificadores internos `nexus_*`, `TemaNexus` e `user://nexus_os/`
 foram preservados de propósito (compatibilidade); qualquer "Nexus" visível ao jogador deve ser lido como Maya.
@@ -40,8 +40,7 @@ Minigames: sem cronômetro, tentativas ilimitadas, [Verificar] trava as peças c
 Removidos (sem mais uso no roteiro): relógio de dias e `Encerrar o dia`, Calendário, E-mail, Navegador, Calculadora, Monitor de Sistema, falso boot,
 efeitos de terror condicionais, `apt-get`/instalação de apps, padrões escuros, reações de NPC, ritmo de progressão, cartão do dia e a revelação do desktop.
 No repositório os arquivos viraram stubs de uma linha (`# Arquivo obsoleto ... Pode ser apagado.`) apenas onde a pasta do jogador não permite apagar;
-podem ser excluídos manualmente. O diretório `backend/` (protótipo em C) e `tools/testar_backend.py` **não fazem parte do jogo** e continuam descritos pelo
-modelo antigo (veja pendências).
+podem ser excluídos manualmente. O diretório `backend/` (CLI auxiliar em C) e `tools/testar_backend.py` **não fazem parte do jogo**; a ponte com o jogo é só o arquivo `estado_jogo.json` (seção 18.7).
 
 ## 18.4 Validação executada
 
@@ -80,4 +79,34 @@ quebra automática sem largura mínima em `app_maya.tscn`.
 - Revisão narrativa de D1 e D3 (textos provisórios marcados com `[CONTEUDO_NARRATIVO_PENDENTE]` / texto neutro).
 - Jogada manual completa pela interface (os testes automáticos cobrem o motor, o desktop real e cada app isolado, mas não substituem uma partida de ponta a ponta com mouse, teclado e controle).
 - `backend/` (protótipo C) e `tools/testar_backend.py` seguem o modelo antigo; não afetam o jogo.
-- Legado sem uso que pode ser apagado manualmente: `estado_jogo_backend.gd`, `busca_interna.gd`, `regras.gd`/`regras.json` parciais, itens de `shared/ui` (`painel_opcoes`, `dialogo_nexus`), sinais antigos de `gerenciador_estado.gd` e os stubs `# Arquivo obsoleto`.
+- Legado sem uso que pode ser apagado manualmente: `busca_interna.gd`, `regras.gd`/`regras.json` parciais, itens de `shared/ui` (`painel_opcoes`, `dialogo_nexus`), sinais antigos de `gerenciador_estado.gd` e os stubs `# Arquivo obsoleto`.
+
+## 18.7 Roteiro v2.1 (2026-11-23)
+
+Base: o projeto anterior (v2.0, validado no Godot) recebeu o que a versão nova do projeto trouxe de bom e foi alinhado ponto a ponto com o PDF v2.1.
+**Não foi possível rodar a Godot neste ambiente**: tudo abaixo foi verificado pelos validadores estáticos e pela suíte do C; a suíte de Godot precisa ser
+rodada no editor (`tests/sistemas_novos/sistemas_novos.tscn`, que ganhou o módulo `modulo_v21.gd`).
+
+| Regra da v2.1 | Onde |
+|---|---|
+| T3.5 (rotina): [Tenho certeza] D −5, [Trocar] D +5 | `features/apps/rotina/scripts/app_rotina.gd` |
+| T9.6: [Sim] D +15; [Não] D −15 e A +1, ignorado com Organização + Apps + Mensageiro ativos | `roteiro_v2.json` (T9.6) |
+| Recusa total: sem investigação profunda, D ≤ 35, A ≥ 3, no máximo 1 permissão ativa e Mensageiro desligado | `GerenciadorNarrativa.avaliar_final` |
+| Religar em Configurações uma permissão revogada desfaz exatamente a revogação (D +5, A −1, flags do canal) | `Permissoes.reconceder`, `GerenciadorEstado.desfazer_resistencia`, `app_config.gd` |
+| Janela de investigação até T6.8: o histórico antigo abre pelo painel da Maya durante a conversa da Task 6 e volta ao mesmo nó (`@retorno_t5`) | `GerenciadorNarrativa.abrir_historico_antigo`, `app_maya.gd` |
+| "Você leu o que eu disse?" é sempre da Bia | `roteiro_v2.json` (T6.3) |
+| 10 arquivos de apoio da pasta Lógica, `rascunho_apresentacao` completo, Lista 4 no final Modo manual | `vfs_inicial.json`, `finais_v2.json` |
+| `{o/a}` nos textos (inferência por pronome e nome) | `perfil_jogador.gd` |
+| Minigame #2 disponível até o fim de T9.5R; a Maya o bloqueia em T9.6 | `sistema_arquivos_virtual.gd` |
+
+**Removido de propósito.** A versão nova do projeto trazia um bloqueio lógico (De Morgan / Modus Tollens) na pasta do Rafael, com dicas no Mensageiro, três
+conquistas ligadas a ele e um atalho T5.2 → TR.0. O roteiro v2.1 não prevê nada disso, e o bloqueio podia travar a investigação para sempre; tudo foi
+retirado. Também não foram aproveitados os deslocamentos de flags de investigação/arquivamento dessa versão, que contradiziam a v2.1.
+
+**Aproveitado da versão nova.** Visual e áudio (Mensageiro com digitação e dicas de interface, Jogos "Sintaxe Neon" com música, painel de conquistas, créditos,
+glitch progressivo, ícones e cenas do monitor), reescritos por cima do fluxo validado.
+
+**Backend em C (v2.1).** `backend/` traz `bk_maya_v21.c` (matriz de escolhas, finais e regras da v2.1); 1461 verificações em C e 156 em `tools/testar_backend.py`
+passam, com Valgrind, `clang-tidy` e `-Werror`. Ponte: `estado_jogo.json` com `schema_version` 2 (`EstadoJogoBackend.criar_v21`, `registrar_escolha_v21`,
+`aplicar_ao_jogo`), desligada por padrão (`usar_backend_json`); cada opção do roteiro com `id_backend` (47) liga a escolha ao id canônico do C.
+O jogo nunca executa o backend (`make check-shell`).
