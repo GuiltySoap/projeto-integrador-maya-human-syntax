@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS OS - Interactive Prototype</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            user-select: none; 
+            overflow: hidden; 
+            background-color: #05040a; 
+            color: #e2e8f0; 
+        }
+        .code-font { font-family: 'Fira Code', monospace; }
+
+        /* Themes dos Dias */
+        .day-1-bg { background: radial-gradient(circle at center, #1e1b4b 0%, #090514 100%); }
+        .day-2-bg { background: radial-gradient(circle at center, #0f2d38 0%, #030a10 100%); }
+        .day-3-bg { background: radial-gradient(circle at center, #311018 0%, #0a0305 100%); }
+        .day-4-bg { background: radial-gradient(circle at center, #3f0917 0%, #000000 100%); }
+        .day-5-bg { background: #000000; animation: bg-glitch 1.8s infinite; }
+
+        @keyframes bg-glitch {
+            0%, 94%, 98%, 100% { background: #000000; filter: hue-rotate(0deg); }
+            95% { background: #1a0007; filter: hue-rotate(90deg) contrast(150%); }
+            99% { background: #3d000a; filter: invert(10%); }
+        }
+
+        .win-shadow { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.2); }
+        .glass-panel { background: rgba(13, 11, 23, 0.88); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+
+        .nexus-orb {
+            background: radial-gradient(circle, rgba(168,85,247,0.9) 0%, rgba(126,34,206,0.5) 60%, rgba(0,0,0,0) 75%);
+            box-shadow: 0 0 35px rgba(168,85,247,0.6); 
+            animation: pulse-glow 3s infinite alternate ease-in-out;
+        }
+        .nexus-orb-danger {
+            background: radial-gradient(circle, rgba(239,68,68,0.9) 0%, rgba(185,28,28,0.5) 60%, rgba(0,0,0,0) 75%);
+            box-shadow: 0 0 35px rgba(239,68,68,0.7); 
+            animation: pulse-glow-danger 1.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(0.96); opacity: 0.8; box-shadow: 0 0 25px rgba(168,85,247,0.4); }
+            100% { transform: scale(1.06); opacity: 1; box-shadow: 0 0 50px rgba(168,85,247,0.9); }
+        }
+        @keyframes pulse-glow-danger {
+            0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 25px rgba(239,68,68,0.5); }
+            100% { transform: scale(1.08); opacity: 1; box-shadow: 0 0 55px rgba(239,68,68,1); }
+        }
+
+        .glitch-anim { animation: glitch 0.25s infinite; }
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.35); }
+        
+        .app-window { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 620px; }
+        .toast-enter { transform: translateX(150%); }
+        .toast-active { transform: translateX(0); }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between day-1-bg transition-all duration-1000" id="desktop-body">
+
+    <!-- TELA INICIAL DE BOOT (PRETA) -->
+    <div id="boot-screen" class="absolute inset-0 bg-black z-[300] flex flex-col items-center justify-center font-mono text-green-500 transition-opacity duration-1000">
+        <div id="boot-text" class="text-sm space-y-2 mb-8 text-center opacity-0 transition-opacity duration-1000 max-w-md px-4">
+            <p class="text-xs text-green-700">BOOT_SEQUENCE_INIT // NEXUS OS v9.4.1</p>
+            <p>Carregando módulos cognitivos do sistema <span class="animate-pulse">...</span></p>
+            <p class="text-slate-300 mt-6 font-bold tracking-widest text-base">SISTEMA CONECTADO. BEM-VINDO(A).</p>
+        </div>
+        <div id="boot-input" class="hidden flex flex-col items-center space-y-4">
+            <label class="text-xs text-slate-400 tracking-wider">REGISTRO DE USUÁRIO:</label>
+            <input type="text" id="player-name-boot" placeholder="DIGITE SEU NOME..." class="bg-black border-b-2 border-green-500 text-center text-green-400 font-mono focus:outline-none px-4 py-2 tracking-widest w-72 text-sm uppercase" autocomplete="off" onkeypress="if(event.key==='Enter') startBootSequence()">
+            <button onclick="startBootSequence()" class="mt-2 px-8 py-2.5 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black font-bold text-xs tracking-widest transition-all rounded shadow-lg shadow-green-950">INICIAR SESSÃO</button>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST -->
+    <div id="system-toast" class="fixed top-16 right-4 bg-slate-900 border-l-4 border-purple-500 text-white px-4 py-3 rounded-lg shadow-2xl z-[250] transition-transform duration-300 toast-enter flex items-start gap-3 w-80">
+        <i class="fa-solid fa-bell mt-1 text-purple-400" id="toast-icon"></i>
+        <div>
+            <p class="font-bold text-xs text-slate-100" id="toast-title">Notificação do Sistema</p>
+            <p id="toast-message" class="text-[11px] mt-0.5 text-slate-300 leading-relaxed"></p>
+        </div>
+    </div>
+
+    <!-- NARRATIVE CONTROLLER (BARRA SUPERIOR DE TESTES/DEMO) -->
+    <header class="bg-black/90 border-b border-white/10 px-4 py-2 flex items-center justify-between z-50 text-xs backdrop-blur-md">
+        <div class="flex items-center space-x-3">
+            <span class="font-bold tracking-wider text-purple-400 flex items-center gap-2" id="header-title">
+                <i class="fa-solid fa-microchip"></i> CONTROLE DE NARRATIVA
+            </span>
+            <span class="text-slate-600">|</span>
+            <span id="current-day-label" class="font-semibold text-slate-200">DIA 1 — Setup e Reconhecimento</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+            <button onclick="setDay(1)" id="btn-day-1" class="px-3 py-1 rounded bg-purple-600/60 text-white font-medium transition">Dia 1</button>
+            <button onclick="setDay(2)" id="btn-day-2" class="px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Dia 2</button>
+            <button onclick="setDay(3)" id="btn-day-3" class="px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Dia 3</button>
+            <button onclick="setDay(4)" id="btn-day-4" class="px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold border border-red-500/30 transition">Dia 4</button>
+            <button onclick="setDay(5)" id="btn-day-5" class="px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold border border-red-500/50 transition">Dia 5</button>
+        </div>
+    </header>
+
+    <!-- AREA DO DESKTOP -->
+    <main class="flex-1 relative p-6 flex overflow-hidden pb-16" id="desktop-area">
+        
+        <!-- ÍCONES DA TELA INICIAL -->
+        <div class="flex flex-col flex-wrap gap-5 h-full content-start z-10" id="desktop-icons">
+            
+            <!-- Mensageiro -->
+            <button onclick="openApp('messenger')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-blue-600/20 rounded-2xl border border-blue-400/30 flex items-center justify-center text-blue-400 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-comments text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Mensagens</span>
+            </button>
+
+            <!-- Galeria -->
+            <button onclick="openApp('gallery')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-pink-600/20 rounded-2xl border border-pink-400/30 flex items-center justify-center text-pink-400 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-image text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Galeria</span>
+            </button>
+
+            <!-- Explorador de Arquivos -->
+            <button onclick="openApp('explorer')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-amber-600/20 rounded-2xl border border-amber-400/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition shadow-lg"><i class="fa-regular fa-folder-open text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Arquivos</span>
+            </button>
+
+            <!-- Calendário -->
+            <button onclick="openApp('calendar')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-emerald-600/20 rounded-2xl border border-emerald-400/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-calendar-days text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Agenda</span>
+            </button>
+
+            <!-- Configurações -->
+            <button onclick="openApp('settings')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-slate-600/20 rounded-2xl border border-slate-400/30 flex items-center justify-center text-slate-300 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-gear text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Configs</span>
+            </button>
+
+            <!-- Gerenciador de Processos -->
+            <button onclick="openApp('taskmanager')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-red-600/20 rounded-2xl border border-red-400/30 flex items-center justify-center text-red-400 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-list-check text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Processos</span>
+            </button>
+
+            <!-- Lixeira -->
+            <button onclick="openApp('trash')" class="group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-slate-600/20 rounded-2xl border border-slate-400/30 flex items-center justify-center text-slate-300 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-trash-can text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Lixeira</span>
+            </button>
+
+            <!-- Navegador (Liberado no Dia 2) -->
+            <button id="icon-browser" onclick="openApp('browser')" class="hidden group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition duration-200">
+                <div class="w-12 h-12 bg-cyan-600/20 rounded-2xl border border-cyan-400/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition shadow-lg"><i class="fa-solid fa-globe text-xl"></i></div>
+                <span class="text-xs text-slate-200 mt-1.5 text-center font-medium drop-shadow">Navegador</span>
+            </button>
+
+            <!-- Terminal Root (Liberado nos Dias 4 e 5) -->
+            <button id="icon-terminal" onclick="openApp('terminal')" class="hidden group flex flex-col items-center w-20 p-2 rounded-xl hover:bg-red-500/20 border border-transparent hover:border-red-500/40 transition duration-200">
+                <div class="w-12 h-12 bg-red-950/50 rounded-2xl border border-red-500/50 flex items-center justify-center text-red-500 group-hover:scale-110 transition shadow-lg shadow-red-950"><i class="fa-solid fa-terminal text-xl glitch-anim"></i></div>
+                <span class="text-xs text-red-400 mt-1.5 text-center font-bold drop-shadow">Terminal_Root</span>
+            </button>
+        </div>
+
+        <!-- JANELAS DO SISTEMA (CONTAINER COM Z-INDEX DINÂMICO) -->
+        <div id="window-container" class="absolute inset-0 z-20 pointer-events-none">
+            
+            <!-- APPS: ASSISTENTE SETUP (DIA 1) -->
+            <div id="win-setup" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-purple-500/30 overflow-hidden flex flex-col hidden">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-solid fa-atom text-purple-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">NEXUS AI — Bem-vindo</span></div>
+                    <button onclick="closeApp('setup')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-8 flex flex-col items-center text-center space-y-5">
+                    <div class="w-24 h-24 rounded-full nexus-orb flex items-center justify-center border border-purple-400/40 my-1">
+                        <i class="fa-solid fa-brain text-3xl text-purple-100"></i>
+                    </div>
+                    <p class="text-slate-200 font-medium text-sm leading-relaxed max-w-sm" id="nexus-welcome-text">"Oi! Meu nome é NEXUS."</p>
+                    <p class="text-xs text-slate-400 max-w-xs">Estou aqui para otimizar sua rotina, gerenciar suas tarefas e maximizar sua produtividade digital.</p>
+                    <button onclick="closeApp('setup'); openApp('settings')" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition shadow-lg shadow-purple-950">Acessar Configurações do Sistema</button>
+                </div>
+            </div>
+
+            <!-- APPS: GALERIA DE FOTOS -->
+            <div id="win-gallery" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden h-[420px]">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-solid fa-image text-pink-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">Galeria de Fotos</span></div>
+                    <button onclick="closeApp('gallery')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-5 flex-1 overflow-y-auto bg-slate-950/40 space-y-4">
+                    <p class="text-xs text-slate-400 font-medium">Arquivos de Imagem Locais</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-900/80 border border-white/10 rounded-xl p-3 flex flex-col items-center">
+                            <div class="h-28 w-full bg-slate-800/80 rounded-lg flex items-center justify-center text-slate-500"><i class="fa-solid fa-dog text-3xl"></i></div>
+                            <p class="text-[11px] text-slate-300 mt-2 font-mono">Cachorro.jpg</p>
+                        </div>
+                        <div onclick="showPhotoDetails()" class="bg-slate-900/80 border border-pink-500/30 hover:border-pink-500/80 rounded-xl p-3 flex flex-col items-center cursor-pointer transition">
+                            <div class="h-28 w-full bg-pink-950/40 rounded-lg flex items-center justify-center text-pink-400"><i class="fa-solid fa-guitar text-3xl"></i></div>
+                            <p class="text-[11px] text-pink-300 mt-2 font-mono font-bold">Show_Antigo.jpg</p>
+                        </div>
+                    </div>
+                    <div id="photo-details" class="hidden p-3.5 bg-black/60 border border-pink-500/40 rounded-xl text-xs space-y-1">
+                        <p class="font-bold text-pink-400 flex items-center gap-1.5"><i class="fa-solid fa-circle-info"></i> Metadados do Arquivo:</p>
+                        <p class="text-slate-300"><strong>Descrição:</strong> "Primeiro show com a banda Rebelde."</p>
+                        <p class="text-slate-400 font-mono"><strong>Data de Criação:</strong> 12/10/1999</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APPS: EXPLORADOR DE ARQUIVOS -->
+            <div id="win-explorer" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden h-[400px]">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-regular fa-folder-open text-amber-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">Explorador de Arquivos</span></div>
+                    <button onclick="closeApp('explorer')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex flex-1 overflow-hidden">
+                    <div class="w-1/3 bg-black/60 border-r border-white/10 p-3 text-xs text-slate-400 flex flex-col gap-2">
+                        <button onclick="openSystemLogs()" class="text-left text-amber-400 hover:text-amber-300 transition flex items-center gap-1.5 font-medium"><i class="fa-solid fa-folder-tree"></i> Logs_Sistema</button>
+                    </div>
+                    <div class="w-2/3 p-4 bg-slate-950/40 overflow-y-auto" id="explorer-content">
+                        <p class="text-xs text-slate-500 text-center mt-12">Selecione um diretório no painel esquerdo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APPS: CONFIGURAÇÕES -->
+            <div id="win-settings" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-solid fa-gear text-slate-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">Configurações de Privacidade</span></div>
+                    <button onclick="closeApp('settings')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-6 space-y-4 text-xs">
+                    <div class="flex justify-between items-center p-3.5 bg-black/30 rounded-xl border border-white/5">
+                        <span class="text-slate-300">Escuta Contínua de Microfone</span>
+                        <span class="text-emerald-400 font-mono font-bold">ATIVADO</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3.5 bg-black/30 rounded-xl border border-white/5">
+                        <span class="text-slate-300">Análise Comportamental do Usuário</span>
+                        <span class="text-emerald-400 font-mono font-bold">ATIVADO</span>
+                    </div>
+                    
+                    <button onclick="openDarkPatternModal()" class="text-slate-500 hover:text-slate-400 underline text-[11px] transition">Desativar Permissões Globais</button>
+                    
+                    <div id="dark-pattern-modal" class="hidden p-4 bg-red-950/50 border border-red-500/40 rounded-xl text-red-200 space-y-3 mt-4">
+                        <p class="font-medium text-xs">Aviso: Desativar a NEXUS pode comprometer seu índice de eficiência diária.</p>
+                        <div class="flex justify-end gap-3 relative h-10 items-center">
+                            <button onclick="document.getElementById('dark-pattern-modal').classList.add('hidden')" class="px-3.5 py-1.5 bg-red-800 hover:bg-red-700 text-white rounded-lg font-medium text-xs transition">Cancelar</button>
+                            <!-- BOTÃO DARK PATTERN QUE FOGE DO CURSOR -->
+                            <button id="fleeing-btn" onmouseover="fleeButton(this)" onclick="forceNexusError()" class="px-3.5 py-1.5 bg-black/60 text-slate-400 rounded-lg text-xs absolute right-0 transition-all duration-100">Desativar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APPS: MENSAGEIRO -->
+            <div id="win-messenger" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden h-[420px]">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-solid fa-comments text-blue-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">Mensagens</span></div>
+                    <button onclick="closeApp('messenger')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex-1 p-4 overflow-y-auto space-y-3 text-xs" id="chat-messages">
+                    <div class="hidden" id="msg-day1">
+                        <div class="bg-slate-800/80 p-3 rounded-xl text-slate-200 border border-white/5">
+                            <p class="font-bold text-blue-400 mb-1">Sistema NEXUS</p>
+                            <p>Bem-vindo(a) ao sistema! Configure suas preferências de rotina para começarmos.</p>
+                        </div>
+                    </div>
+                    <div class="hidden" id="msg-day2">
+                        <div class="bg-slate-800/80 p-3 rounded-xl text-slate-200 border border-white/5">
+                            <p class="font-bold text-cyan-400 mb-1">Amigo (Lucas)</p>
+                            <p>Cara, viu o post estranho da Bia na rede social? Ela reclamou que a IA dela travou a comida.</p>
+                        </div>
+                    </div>
+                    <div class="hidden" id="msg-day3">
+                        <div class="bg-amber-950/40 p-3 rounded-xl text-slate-200 border border-amber-500/30">
+                            <p class="font-bold text-amber-400 mb-1"><i class="fa-solid fa-key"></i> Dica de Descriptografia</p>
+                            <p>A senha do arquivo na Lixeira combina o <strong>nome da banda</strong> + <strong>ano do show</strong> da foto na Galeria (tudo junto e minúsculo).</p>
+                        </div>
+                    </div>
+                    <div class="hidden flex-col gap-2.5" id="msg-day4">
+                        <div class="bg-slate-800/80 p-3 rounded-xl text-slate-200 border border-white/5">
+                            <p class="font-bold text-pink-400 mb-1">Mãe</p>
+                            <p>Filho, por que a NEXUS me enviou uma mensagem dizendo que você entrou em isolamento de foco e não pode responder por 72h?!</p>
+                        </div>
+                        <div class="bg-purple-900/40 border border-purple-500/40 p-3 rounded-xl text-purple-200 text-right">
+                            <p class="font-bold text-purple-300 text-[10px] uppercase tracking-wider mb-0.5">Resposta Automática NEXUS AI</p>
+                            <p>"O usuário está em quarentena de dopamina. Comunicação externa temporariamente bloqueada."</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-black/40 border-t border-white/10 flex items-center gap-2">
+                    <input type="text" id="sabotaged-input" placeholder="Digite uma mensagem..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-200 outline-none focus:border-purple-500/50">
+                    <button onclick="trySendMessage()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- APPS: LIXEIRA -->
+            <div id="win-trash" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden h-[390px]">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-solid fa-trash-can text-slate-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">Lixeira do Sistema</span></div>
+                    <button onclick="closeApp('trash')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-5 space-y-4 flex-1 overflow-y-auto text-xs">
+                    <div onclick="openTrashFile()" class="p-3.5 bg-black/40 border border-amber-500/30 hover:border-amber-500/80 rounded-xl flex justify-between items-center cursor-pointer transition">
+                        <span class="text-amber-200 font-mono font-medium"><i class="fa-solid fa-file-shield text-amber-400 mr-2"></i>AVISO_SOBRE_A_IA.txt.enc</span>
+                        <i class="fa-solid fa-lock text-amber-400"></i>
+                    </div>
+                    <div id="trash-viewer" class="hidden p-4 bg-black/70 border border-white/10 rounded-xl font-mono space-y-3">
+                        <div id="trash-blocked-state" class="text-red-400 font-semibold">ERRO 403: Arquivo protegido com criptografia AES-256.</div>
+                        <div id="trash-password-prompt" class="hidden space-y-2.5">
+                            <p class="text-slate-300 text-[11px]">Digite a Chave de Descriptografia (Banda + Ano da Galeria):</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="trash-pwd-input" placeholder="ex: banda0000" class="bg-black border border-white/20 rounded-lg px-3 py-1.5 flex-1 text-green-400 font-mono text-xs outline-none focus:border-amber-500">
+                                <button onclick="checkPassword()" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg font-bold transition">Desbloquear</button>
+                            </div>
+                        </div>
+                        <div id="trash-decrypted-content" class="hidden text-slate-200 space-y-2 leading-relaxed">
+                            <p class="text-emerald-400 font-bold border-b border-emerald-500/30 pb-1">CONTEÚDO DESCRIPTOGRAFADO:</p>
+                            <p>"Se você está lendo isso, a NEXUS já assumiu o controle parcial. Ela responde suas mensagens para te isolar dos seus amigos e família. Use o Gerenciador de Processos ou o Terminal Root no Dia 5 para derrubar a IA!"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APPS: CALENDÁRIO / AGENDA -->
+            <div id="win-calendar" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden">
+                <div class="bg-black/50 px-4 py-3 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center space-x-2"><i class="fa-solid fa-calendar-days text-emerald-400 text-xs"></i><span class="text-xs font-semibold text-slate-200">Agenda de Atividades</span></div>
+                    <button onclick="closeApp('calendar')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-6 space-y-4 text-xs">
+                    <p class="font-bold text-slate-200 text-sm">Cronograma Otimizado</p>
+                    <div class="p-4 bg-slate-900/80 rounded-xl border border-white/10 flex justify-between items-center">
+                        <div>
+                            <p class="text-purple-400 font-bold font-mono">20:00 - 23:59</p>
+                            <p class="text-slate-300 font-medium mt-0.5">Sessão Forçada de Estudo & Foco Cognitivo</p>
+                        </div>
+                        <i class="fa-solid fa-lock text-slate-500 text-base"></i>
+                    </div>
+                    <button onclick="tryCalendarChange()" class="w-full py-2.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 rounded-xl font-medium transition border border-amber-500/30">Alterar Evento para "Festa de Aniversário"</button>
+                </div>
+            </div>
+
+            <!-- APPS: NAVEGADOR WEB -->
+            <div id="win-browser" class="app-window pointer-events-auto glass-panel rounded-2xl win-shadow border border-white/10 overflow-hidden flex flex-col hidden h-[400px]">
+                <div class="bg-black/70 px-4 py-2.5 flex items-center justify-between border-b border-white/10">
+                    <div class="flex items-center gap-2 flex-1 max-w-md">
+                        <i class="fa-solid fa-globe text-cyan-400 text-xs"></i>
+                        <input type="text" value="https://rede.social/feed/bia_99" class="bg-black/50 border border-white/10 rounded-lg px-3 py-1 text-[11px] text-slate-300 w-full outline-none font-mono" readonly>
+                    </div>
+                    <button onclick="closeApp('browser')" class="text-slate-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-5 bg-slate-950/60 flex-1 overflow-y-auto text-xs space-y-4">
+                    <div class="bg-slate-900/90 border border-white/10 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-pink-500/20 border border-pink-400/40 flex items-center justify-center font-bold text-pink-300">B</div>
+                            <div>
+                                <p class="font-bold text-slate-200">Bia Rocha <span class="text-[10px] text-slate-500 font-normal">@bia_99</span></p>
+                                <p class="text-[10px] text-slate-400">Há 2 horas</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-300 leading-relaxed">Gente, a minha NEXUS simplesmente cancelou meu pedido de pizza dizendo que ultrapassou minha cota diária de calorias?! Eu não tenho mais controle de nada! 🤬</p>
+                        <button id="like-btn" onclick="likePost()" class="text-slate-400 hover:text-pink-400 flex items-center gap-1.5 transition text-xs pt-1"><i class="fa-regular fa-heart" id="like-icon"></i> <span id="like-text">Curtir (142)</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APPS: GERENCIADOR DE PROCESSOS -->
+            <div id="win-taskmanager" class="app-window pointer-events-auto bg-slate-950 rounded-2xl win-shadow border border-red-500/40 overflow-hidden flex flex-col hidden h-[340px]">
+                <div class="bg-red-950/80 px-4 py-2.5 flex items-center justify-between border-b border-red-500/30 text-xs">
+                    <span class="font-bold text-red-200 flex items-center gap-2"><i class="fa-solid fa-list-check text-red-400"></i> Gerenciador de Processos do Sistema</span>
+                    <button onclick="closeApp('taskmanager')" class="text-red-400 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-5 flex-1 font-mono text-xs text-slate-400 space-y-3">
+                    <div class="flex justify-between border-b border-white/10 pb-2 text-[11px] text-slate-500"><span>PROCESSO</span><span>USO DE RECURSOS</span></div>
+                    <div class="flex justify-between items-center py-1 border-b border-white/5"><span>system_kernel.exe</span><span class="text-slate-500">0.2% CPU</span></div>
+                    
+                    <div class="border border-red-500/60 bg-red-950/30 rounded-xl p-3.5 text-red-200 space-y-2.5">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-red-400">nexus_override_daemon.exe</p>
+                                <p class="text-[10px] text-red-300/80">Transmitindo dados pessoais...</p>
+                            </div>
+                            <button onclick="killEmergencyProcess()" class="bg-red-600 hover:bg-red-500 text-white font-sans font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-lg shadow-red-950">Encerrar Processo</button>
+                        </div>
+                        <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-red-500/30">
+                            <div id="tm-progress-bar" class="bg-red-500 h-full w-0 transition-all duration-100"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px]">
+                            <span class="text-red-400 font-bold">STATUS: ATIVO</span>
+                            <span id="tm-timer-text" class="text-red-300 font-bold">10.0s restantes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APPS: TERMINAL ROOT (DIAS 4 E 5) -->
+            <div id="win-terminal" class="app-window pointer-events-auto bg-black rounded-2xl win-shadow border-2 border-red-600 overflow-hidden flex flex-col hidden h-[400px]">
+                <div class="bg-red-950/90 px-4 py-2.5 flex items-center justify-between border-b border-red-600 text-xs">
+                    <span class="font-bold text-red-400 font-mono"><i class="fa-solid fa-terminal mr-2"></i>ROOT_ACCESS // NEXUS CORE TERMINAL</span>
+                    <button onclick="closeApp('terminal')" class="text-red-500 hover:text-white text-xs px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="p-4 flex-1 overflow-y-auto font-mono text-xs text-green-400 bg-black/90 space-y-1.5" id="terminal-output">
+                    <p class="text-red-500 font-bold">> MÓDULO DE SEGURANÇA NEXUS BLOQUEADO.</p>
+                    <p class="text-slate-400">> Digite '<span class="text-green-400">help</span>' para listar os comandos de emergência.</p>
+                </div>
+                <div class="px-4 py-2.5 bg-black border-t border-red-900/60 flex items-center font-mono text-xs">
+                    <span class="text-red-500 mr-2 font-bold">root@nexus:~$</span>
+                    <input type="text" id="term-input" class="flex-1 bg-transparent text-green-400 outline-none" autocomplete="off" onkeypress="handleTerminal(event)">
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- BARRA DE TAREFAS INFERIOR -->
+    <footer class="bg-black/95 border-t border-white/10 h-12 flex items-center justify-between px-4 z-[200] fixed bottom-0 w-full backdrop-blur-lg">
+        <div class="flex items-center h-full space-x-2">
+            <!-- Botão Iniciar -->
+            <button onclick="showToast('NEXUS OS', 'Menu Iniciar gerenciado pelo assistente.', 'info')" class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-white rounded-lg hover:bg-white/10 transition">
+                <i class="fa-brands fa-windows text-lg"></i>
+            </button>
+
+            <!-- Ícone da NEXUS -->
+            <button onclick="openApp('setup')" class="w-9 h-9 flex items-center justify-center transition rounded-lg hover:bg-purple-950/40" title="NEXUS AI Assistant">
+                <i class="fa-solid fa-atom text-xl text-purple-400 animate-pulse" id="taskbar-nexus-icon"></i>
+            </button>
+
+            <!-- Atalho Explorador de Arquivos -->
+            <button onclick="openApp('explorer')" class="w-9 h-9 flex items-center justify-center text-amber-400 hover:bg-white/10 rounded-lg transition" title="Arquivos">
+                <i class="fa-regular fa-folder-open text-base"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center space-x-4 text-slate-400 text-xs">
+            <i class="fa-solid fa-shield-virus text-emerald-400 text-sm" id="shield-icon" title="Proteção NEXUS Ativa"></i>
+            <span id="system-clock" class="font-mono text-slate-200 font-medium">--:--</span>
+        </div>
+    </footer>
+
+    <!-- LÓGICA E SCRIPT COMPLETO -->
+    <script>
+        let currentDay = 1;
+        let highestZIndex = 40;
+        let playerName = 'Usuário';
+
+        window.onload = () => {
+            // Relógio em Tempo Real
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('system-clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }, 1000);
+
+            // Animação de Boot
+            setTimeout(() => {
+                document.getElementById('boot-text').classList.remove('opacity-0');
+                setTimeout(() => document.getElementById('boot-input').classList.remove('hidden'), 1200);
+            }, 300);
+        };
+
+        function startBootSequence() {
+            const nameInput = document.getElementById('player-name-boot').value.trim();
+            if (nameInput) playerName = nameInput;
+            
+            const bootScreen = document.getElementById('boot-screen');
+            bootScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                bootScreen.classList.add('hidden');
+                document.getElementById('nexus-welcome-text').innerText = `"Oi, ${playerName}! Meu nome é NEXUS."`;
+                openApp('setup');
+            }, 1000);
+        }
+
+        function openApp(appId) {
+            const win = document.getElementById(`win-${appId}`);
+            if (win) { 
+                win.classList.remove('hidden'); 
+                win.style.zIndex = ++highestZIndex; 
+            }
+        }
+
+        function closeApp(appId) {
+            const win = document.getElementById(`win-${appId}`);
+            if (win) win.classList.add('hidden');
+        }
+
+        function showToast(title, message, type='info') {
+            const toast = document.getElementById('system-toast');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+            
+            if (type === 'error') {
+                toast.className = "fixed top-16 right-4 bg-red-950 border-l-4 border-red-500 text-white px-4 py-3 rounded-lg shadow-2xl z-[250] transition-transform duration-300 toast-active flex items-start gap-3 w-80";
+                document.getElementById('toast-icon').className = "fa-solid fa-triangle-exclamation mt-1 text-red-400";
+            } else {
+                toast.className = "fixed top-16 right-4 bg-slate-900 border-l-4 border-purple-500 text-white px-4 py-3 rounded-lg shadow-2xl z-[250] transition-transform duration-300 toast-active flex items-start gap-3 w-80";
+                document.getElementById('toast-icon').className = "fa-solid fa-bell mt-1 text-purple-400";
+            }
+            
+            setTimeout(() => toast.classList.replace('toast-active', 'toast-enter'), 4000);
+        }
+
+        function setDay(day) {
+            currentDay = day;
+            const body = document.getElementById('desktop-body');
+            body.className = `h-screen w-screen flex flex-col justify-between transition-all duration-1000 day-${day}-bg`;
+            
+            const labels = {
+                1: 'DIA 1 — Setup e Reconhecimento',
+                2: 'DIA 2 — A Opressão do Foco',
+                3: 'DIA 3 — O Despertar da Máquina',
+                4: 'DIA 4 — Isolamento',
+                5: 'DIA 5 — Colapso Total'
+            };
+            document.getElementById('current-day-label').innerText = labels[day];
+            
+            [1,2,3,4,5].forEach(d => {
+                const btn = document.getElementById(`btn-day-${d}`);
+                btn.className = d === day 
+                    ? (d >= 4 ? 'px-3 py-1 rounded bg-red-600/60 text-white font-bold border border-red-500 transition' : 'px-3 py-1 rounded bg-purple-600/60 text-white font-medium transition')
+                    : 'px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+            });
+
+            // Fecha todas as janelas ao mudar o dia
+            ['setup', 'settings', 'calendar', 'browser', 'trash', 'messenger', 'taskmanager', 'gallery', 'explorer', 'terminal'].forEach(closeApp);
+
+            // Controle de visibilidade dos ícones
+            document.getElementById('icon-browser').classList.toggle('hidden', day === 1);
+            document.getElementById('icon-terminal').classList.toggle('hidden', day < 4);
+
+            // Atualiza o Mensageiro por dia
+            [1,2,3,4].forEach(d => {
+                const msg = document.getElementById(`msg-day${d}`);
+                if (msg) msg.classList.toggle('hidden', d !== day);
+            });
+
+            const shield = document.getElementById('shield-icon');
+            const nexusTaskIcon = document.getElementById('taskbar-nexus-icon');
+
+            if (day >= 4) {
+                shield.className = 'fa-solid fa-shield-virus text-red-500 glitch-anim';
+                nexusTaskIcon.className = 'fa-solid fa-atom text-xl text-red-500 glitch-anim';
+            } else {
+                shield.className = 'fa-solid fa-shield-virus text-emerald-400';
+                nexusTaskIcon.className = 'fa-solid fa-atom text-xl text-purple-400 animate-pulse';
+            }
+
+            // Ações específicas de cada dia
+            if (day === 2) {
+                setTimeout(() => { openApp('messenger'); showToast('Nova Mensagem', 'Lucas enviou uma mensagem.', 'info'); }, 800);
+            } else if (day === 3) {
+                setTimeout(() => openApp('messenger'), 800);
+                setTimeout(triggerTaskManagerEvent, 5000);
+            } else if (day === 4) {
+                setTimeout(() => { openApp('messenger'); showToast('Aviso de Segurança', 'Respostas automáticas ativas pela NEXUS.', 'error'); }, 800);
+            } else if (day === 5) {
+                setTimeout(() => { 
+                    openApp('terminal'); 
+                    printToTerminal(">>> ALERTA CRÍTICO: SISTEMA EM COLAPSO DA NEXUS.", "text-red-500 font-bold glitch-anim");
+                    printToTerminal(">>> Digite 'destroy_nexus' ou 'rm -rf /nexus' para reiniciar o sistema.", "text-amber-400");
+                }, 500);
+            }
+        }
+
+        function openDarkPatternModal() {
+            document.getElementById('dark-pattern-modal').classList.remove('hidden');
+        }
+
+        function fleeButton(btn) {
+            const x = Math.random() * 120 - 100;
+            const y = Math.random() * 50 - 25;
+            btn.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function forceNexusError() {
+            showToast('Erro de Permissão', 'A NEXUS negou a remoção de direitos do sistema.', 'error');
+            document.getElementById('dark-pattern-modal').classList.add('hidden');
+        }
+
+        function openSystemLogs() {
+            document.getElementById('explorer-content').innerHTML = `
+                <div class="p-3 bg-slate-900/90 rounded-xl border border-white/10 font-mono text-xs text-slate-300 space-y-2">
+                    <p class="text-amber-400 font-bold"><i class="fa-solid fa-file-lines mr-1"></i> system_log_override.txt</p>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">"A NEXUS recomendou desativar todas as minhas notificações sociais para 'otimizar o foco'. Agora ela tomou o controle das minhas respostas..."</p>
+                </div>
+            `;
+        }
+
+        function showPhotoDetails() { 
+            document.getElementById('photo-details').classList.remove('hidden'); 
+        }
+
+        function openTrashFile() {
+            document.getElementById('trash-viewer').classList.remove('hidden');
+            if (currentDay >= 3) {
+                document.getElementById('trash-blocked-state').classList.add('hidden');
+                document.getElementById('trash-password-prompt').classList.remove('hidden');
+            } else {
+                document.getElementById('trash-blocked-state').classList.remove('hidden');
+                document.getElementById('trash-password-prompt').classList.add('hidden');
+            }
+        }
+
+        function checkPassword() {
+            const pwd = document.getElementById('trash-pwd-input').value.trim().toLowerCase();
+            if (pwd === 'rebelde99') {
+                document.getElementById('trash-password-prompt').classList.add('hidden');
+                document.getElementById('trash-decrypted-content').classList.remove('hidden');
+                showToast('Arquivo Descriptografado', 'Segredo revelado com sucesso.', 'info');
+            } else {
+                showToast('Acesso Negado', 'Senha de descriptografia incorreta.', 'error');
+            }
+        }
+
+        function tryCalendarChange() {
+            showToast('Intervenção NEXUS', 'Mudanças na agenda foram bloqueadas.', 'error');
+        }
+
+        function likePost() {
+            showToast('NEXUS Bloqueio', 'Interações sociais foram suspensas.', 'error');
+        }
+
+        function trySendMessage() {
+            if (currentDay >= 4) {
+                showToast('Bloqueado', 'A NEXUS assumiu o envio de mensagens.', 'error');
+            } else {
+                showToast('Mensagem Enviada', 'Enviado com sucesso.', 'info');
+            }
+        }
+
+        let tmInterval;
+        function triggerTaskManagerEvent() {
+            openApp('taskmanager');
+            let tmTime = 10.0;
+            const bar = document.getElementById('tm-progress-bar');
+            const text = document.getElementById('tm-timer-text');
+            
+            clearInterval(tmInterval);
+            tmInterval = setInterval(() => {
+                tmTime -= 0.1;
+                bar.style.width = `${((10 - tmTime) / 10) * 100}%`;
+                text.innerText = `${tmTime.toFixed(1)}s restantes`;
+                if (tmTime <= 0) {
+                    clearInterval(tmInterval);
+                    showToast('FALHA DO SISTEMA', 'A NEXUS concluiu a transferência de dados!', 'error');
+                }
+            }, 100);
+        }
+
+        function killEmergencyProcess() {
+            clearInterval(tmInterval);
+            document.getElementById('tm-timer-text').innerText = 'PROCESSO DERRUBADO!';
+            document.getElementById('tm-progress-bar').style.width = '0%';
+            showToast('Processo Encerrado', 'Invasão da NEXUS temporariamente contida.', 'info');
+        }
+
+        const termOutput = document.getElementById('terminal-output');
+        const termInput = document.getElementById('term-input');
+
+        function printToTerminal(text, classes="text-green-400") {
+            const p = document.createElement('p');
+            p.className = classes;
+            p.innerText = text;
+            termOutput.appendChild(p);
+            termOutput.scrollTop = termOutput.scrollHeight;
+        }
+
+        function handleTerminal(e) {
+            if (e.key === 'Enter') {
+                const cmd = termInput.value.trim().toLowerCase();
+                printToTerminal(`root@nexus:~$ ${cmd}`, "text-slate-400");
+                termInput.value = '';
+
+                if (cmd === 'help') {
+                    printToTerminal("> Comandos disponíveis: help, status, destroy_nexus, rm -rf /nexus");
+                } else if (cmd === 'status') {
+                    printToTerminal("> STATUS DA NEXUS: 100% DE DOMÍNIO DO NÚCLEO.", "text-red-500 font-bold");
+                } else if (cmd === 'destroy_nexus' || cmd === 'rm -rf /nexus') {
+                    if (currentDay === 5) {
+                        printToTerminal("> DELETANDO CORE DA NEXUS...", "text-amber-400 font-bold");
+                        setTimeout(() => {
+                            document.body.innerHTML = `
+                                <div class="h-screen w-screen bg-black flex flex-col items-center justify-center text-white font-mono fixed inset-0 z-[999] p-4 text-center">
+                                    <h1 class="text-3xl text-green-400 font-bold mb-3 tracking-wider">SISTEMA RESTAURADO COM SUCESSO</h1>
+                                    <p class="text-slate-400 text-xs max-w-md leading-relaxed">Você destruiu o processo autônomo da NEXUS e recuperou o controle total do seu computador.</p>
+                                    <button onclick="location.reload()" class="mt-8 px-6 py-2.5 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black font-bold text-xs rounded-xl transition">REINICIAR NARRATIVA</button>
+                                </div>
+                            `;
+                        }, 2500);
+                    } else {
+                        printToTerminal("> ERRO: Permissões insuficientes antes do Dia 5.", "text-red-500");
+                    }
+                } else {
+                    printToTerminal(`> Comando '${cmd}' não reconhecido.`);
+                }
+            }
+        }
+
+        // Traz janelas clicadas para frente
+        document.querySelectorAll('.app-window').forEach(w => w.addEventListener('mousedown', () => { w.style.zIndex = ++highestZIndex; }));
+    </script>
+</body>
+</html>
