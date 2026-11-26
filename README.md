@@ -11,6 +11,17 @@ Através de um aplicativo de chat integrado, você se comunicará com amigos e s
 
 ---
 
+## 👥 Autores
+
+**Squad 1 — Cesar School (Projeto Integrador)**
+
+- **Guilherme Santana Habib Lantyer de Araújo** — Designer, Integração, Programação GDScript ([GitHub](https://github.com/GuiltySoap))
+- **Jennifer Dantas Machado Almeida** — Designer, Roteirista, Artista ([GitHub](https://github.com/jdm-debug))
+- **Linda Sabrina Rosal** — Wireframes ([GitHub](https://github.com/Linda2101))
+- **Tharcylo José** — Programação C ([GitHub](https://github.com/tharcylojose))
+
+---
+
 ### 🎮 Principais Características
 
 - **Imersão Total:** Uma interface que simula de forma realista um sistema operacional, onde a jogabilidade acontece através de cliques em ícones, leitura de arquivos e troca de mensagens.
@@ -440,13 +451,6 @@ Durante a Sprint 01, a equipe aplicou a prática de **Pair Programming (Driver /
 
 ---
 
-## 👥 Autores
-
-**Squad 1 — Cesar School (Projeto Integrador)**
-
-- **Guilherme Santana Habib Lantyer de Araújo** — Designer, Integração, Programação GDScript ([GitHub](https://github.com/GuiltySoap))
-- **Jennifer Dantas Machado Almeida** — Designer, Roteirista, Artista ([GitHub](https://github.com/jdm-debug))
-- **Linda Sabrina Rosal** — Wireframes ([GitHub](https://github.com/Linda2101))
-- **Tharcylo José** — Programação C ([GitHub](https://github.com/tharcylojose))
-
+## Extras
+- Leonardo Tiago / Matheus Oliveira / Iago Ataide
 
