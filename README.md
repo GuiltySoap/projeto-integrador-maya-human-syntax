@@ -404,6 +404,10 @@ Durante a Sprint 01, a equipe aplicou a prática de **Pair Programming (Driver /
   * **Integrantes:** Tharcylo José e Jennifer Dantas
   * **Foco:** Renderização do histórico de mensagens no `AppMensageiro.gd`, tratamento de layout dinâmico e implementação do indicador de digitação assíncrono (US 02, US 03 e US 04).
 
+- **Roteiro e Narrativa:**
+  * **Autora:** Jennifer Dantas
+  * **Foco:** Escrita do roteiro completo do jogo (história, personagens, diálogos e finais).
+  * **Arquivo:** [Roteiro MAYA v2.1 (PDF) na pasta docs](Maya_OS_Build_Oficial_Reborn/docs)
 ---
 
 ## 📹 Evidências da Sprint 01 (Screencasts & Board)
