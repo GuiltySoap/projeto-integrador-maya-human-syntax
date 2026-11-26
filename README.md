@@ -408,6 +408,11 @@ Durante a Sprint 01, a equipe aplicou a prática de **Pair Programming (Driver /
   * **Autora:** Jennifer Dantas
   * **Foco:** Escrita do roteiro completo do jogo (história, personagens, diálogos e finais).
   * **Arquivo:** [Roteiro MAYA v2.1 (PDF) na pasta docs](Maya_OS_Build_Oficial_Reborn/docs)
+
+- **Protótipo Interativo (HTML):**
+  * **Autora:** Jennifer Dantas
+  * **Foco:** Protótipo navegável do sistema operacional fictício, com os 5 dias da narrativa e os principais apps e mecânicas. Criado quando a IA ainda se chamava NEXUS, antes do rebranding para Maya.
+  * **Arquivo:** [nexus_os_prototype.html](Maya_OS_Build_Oficial_Reborn/docs/nexus_os_prototype.html)
 ---
 
 ## 📹 Evidências da Sprint 01 (Screencasts & Board)
